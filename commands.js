@@ -402,6 +402,23 @@ function showSyncDialog(filename, rows, status, toolLibrary) {
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
+        // Map SolidWorks 2026 post-processor tool types onto ncSender's tool
+        // type enum (flat, ball, v-bit, drill, chamfer, surfacing, probe,
+        // thread-mill). /api/tools rejects the raw SolidWorks strings
+        // (ENDMILL, DRILL, CENTER DRILL, COUNTERSINK, …) with a 400, so every
+        // type must be normalized before it is POSTed/PUT to the library.
+        // Unknown types fall back to 'flat' (generic end mill) so a new
+        // SolidWorks type never blocks the sync with a 400.
+        function mapToolType(swType) {
+          switch (String(swType === null || swType === undefined ? '' : swType).trim().toUpperCase()) {
+            case 'ENDMILL': return 'flat';
+            case 'DRILL': return 'drill';
+            case 'CENTER DRILL': return 'drill';
+            case 'COUNTERSINK': return 'chamfer';
+            default: return 'flat';
+          }
+        }
+
         function renderTable() {
           const tbody = document.getElementById('toolsTableBody');
           tbody.innerHTML = rows.map(function(r, idx) {
@@ -472,7 +489,7 @@ function showSyncDialog(filename, rows, status, toolLibrary) {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(Object.assign({}, rawLibTool, {
-                  type: row.type,
+                  type: mapToolType(row.type),
                   diameter: row.diameter,
                   name: row.description
                 }))
@@ -504,7 +521,7 @@ function showSyncDialog(filename, rows, status, toolLibrary) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   toolId: row.toolNumber,
-                  type: row.type,
+                  type: mapToolType(row.type),
                   diameter: row.diameter,
                   name: row.description,
                   toolNumber: null

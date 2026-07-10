@@ -1,3 +1,7 @@
+## v1.0.1
+
+- Fix: map SolidWorks tool types (ENDMILL, DRILL, CENTER DRILL, COUNTERSINK) to ncSender's tool type enum (flat, ball, v-bit, drill, chamfer, surfacing, probe, thread-mill) before syncing to the Tool Library. Previously the raw SolidWorks type strings were sent to `/api/tools` and rejected with a 400 error, so adding new tools and resolving conflicts with "Use G-code" silently failed. Unknown types fall back to `flat` so a new SolidWorks type never blocks the sync.
+
 ## v1.0.0
 
 - Initial release of SW2026 G-Code Tools, replacing Dynamic Tool Slot Mapper.
