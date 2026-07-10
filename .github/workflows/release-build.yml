@@ -76,9 +76,14 @@ jobs:
         id: notes
         run: |
           if [ -f latest_release.md ]; then
+            # latest_release.md is a cumulative changelog (newest section on
+            # top). Publish ONLY the topmost "## vX.X.X" section as this
+            # release's notes, not the whole history. awk prints from the
+            # first "## " header up to (but not including) the next one.
+            SECTION=$(awk '/^## /{if (seen) exit; seen=1} seen' latest_release.md)
             {
               echo 'body<<RELEASE_NOTES_EOF'
-              cat latest_release.md
+              echo "$SECTION"
               echo 'RELEASE_NOTES_EOF'
             } >> "$GITHUB_OUTPUT"
           else
