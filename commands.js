@@ -279,7 +279,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     red: {
       color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
       title: 'Tool Library Conflicts Found',
-      message: 'Some tools in this file don\'t match the ncSender Tool Library. Resolve each conflict below before loading.'
+      message: 'Some tools in this file don\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\'s values automatically.'
     },
     yellow: {
       color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.1)', icon: '🟡',
@@ -306,85 +306,86 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .sw-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: var(--color-text-primary, #e0e0e0);
-        padding: 20px;
-        max-width: 820px;
+        padding: 14px 18px;
+        max-width: 1180px;
         margin: 0 auto;
       }
-      .sw-header { text-align: center; margin-bottom: 16px; }
-      .sw-header h2 { margin: 0 0 8px 0; font-size: 1.3rem; }
-      .sw-filename { color: var(--color-text-secondary); font-size: 0.9rem; word-break: break-all; }
+      .sw-header {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+      }
+      .sw-filename { color: var(--color-text-secondary); font-size: 0.8rem; word-break: break-all; }
       .sw-banner {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 12px 20px; border-radius: 8px; font-size: 1.1rem; font-weight: 600;
-        margin: 16px 0;
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;
         background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
+      }
+      .sw-top {
+        display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px;
+        align-items: stretch; margin-bottom: 10px;
       }
       .sw-message {
         background: var(--color-surface-muted, #1a1a1a);
-        padding: 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.5;
+        padding: 10px 14px; border-radius: 8px; line-height: 1.4; font-size: 0.85rem;
+        display: flex; align-items: center;
       }
       .slot-carousel-section {
-        display: flex; align-items: center; justify-content: center; gap: 6px;
-        padding: 16px; background: var(--color-surface-muted, #1a1a1a);
-        border-radius: 8px; margin-bottom: 16px; overflow-x: auto; min-height: 96px;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        padding: 8px; background: var(--color-surface-muted, #1a1a1a);
+        border-radius: 8px; flex-wrap: nowrap;
       }
-      .slot-carousel-loading { color: var(--color-text-secondary, #999); font-size: 0.85rem; font-style: italic; }
+      .slot-carousel-loading { color: var(--color-text-secondary, #999); font-size: 0.8rem; font-style: italic; }
       .slot-box {
         display: flex; flex-direction: column; align-items: center;
-        min-width: 60px; height: 60px;
+        min-width: 0; flex: 1 1 0; height: 44px;
         background: var(--color-surface, #0a0a0a);
         border: 2px solid var(--color-border, #444);
-        border-radius: 6px; overflow: hidden; flex-shrink: 0;
+        border-radius: 5px; overflow: hidden; flex-shrink: 0;
       }
       .slot-box--used { background: var(--color-accent, #1abc9c); border-color: var(--color-accent, #1abc9c); }
       .slot-box--unused { background: var(--color-surface-muted, #2a2a2a); border-color: var(--color-border, #444); opacity: 0.5; }
-      .slot-box-content { display: flex; align-items: center; justify-content: center; flex: 1; width: 100%; padding: 0 8px; }
-      .slot-tool-id { font-size: 1rem; font-weight: 700; color: #fff; }
-      .slot-empty { font-size: 1.2rem; color: var(--color-text-secondary, #666); }
+      .slot-box-content { display: flex; align-items: center; justify-content: center; flex: 1; width: 100%; padding: 0 4px; }
+      .slot-tool-id { font-size: 0.85rem; font-weight: 700; color: #fff; }
+      .slot-empty { font-size: 1rem; color: var(--color-text-secondary, #666); }
       .slot-box-label {
-        font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+        font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
         color: var(--color-text-secondary, #999); background: var(--color-surface-muted, #1a1a1a);
-        width: 100%; text-align: center; padding: 3px 0; letter-spacing: 0.03em;
+        width: 100%; text-align: center; padding: 1px 0; letter-spacing: 0.02em;
       }
       .slot-box--used .slot-box-label { background: color-mix(in srgb, var(--color-accent, #1abc9c) 80%, #000); color: rgba(255,255,255,0.95); }
       .tools-table-container {
-        max-height: 400px; overflow-y: auto;
-        border: 1px solid var(--color-border, #444); border-radius: 8px; margin-bottom: 16px;
+        border: 1px solid var(--color-border, #444); border-radius: 8px; margin-bottom: 10px;
       }
       .tools-table { width: 100%; border-collapse: collapse; }
-      .tools-table thead { position: sticky; top: 0; background: var(--color-surface-muted, #1a1a1a); z-index: 10; }
-      .tools-table th { padding: 8px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #444); font-size: 0.85rem; }
-      .tools-table td { padding: 8px 12px; border-bottom: 1px solid var(--color-border, #333); vertical-align: top; }
+      .tools-table thead { background: var(--color-surface-muted, #1a1a1a); }
+      .tools-table th { padding: 5px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #444); font-size: 0.75rem; }
+      .tools-table td { padding: 4px 10px; border-bottom: 1px solid var(--color-border, #333); vertical-align: middle; font-size: 0.82rem; }
       .tools-table tbody tr:hover { background: var(--color-border, #2a2a2a); }
+      .gcode-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1px; }
       .row-status-badge {
-        display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem;
+        display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem;
         font-weight: 600; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap;
       }
       .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; }
       .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; }
       .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; }
-      .tool-num { font-weight: 700; font-size: 1rem; }
-      .conflict-diff { margin-top: 6px; font-size: 0.78rem; line-height: 1.6; }
+      .tool-num { font-weight: 700; font-size: 0.9rem; }
+      .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
       .conflict-diff .lib-val { color: #f59e0b; }
       .conflict-diff .gcode-val { color: #1abc9c; }
-      .conflict-actions { display: flex; gap: 6px; margin-top: 8px; }
-      .btn { padding: 12px 24px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+      .btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
       .btn:disabled { opacity: 0.5; cursor: default; }
-      .btn-sm { padding: 6px 10px; font-size: 0.75rem; border-radius: 4px; }
       .btn-primary { background: var(--color-accent, #1abc9c); color: white; }
       .btn-primary:hover { opacity: 0.9; }
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
       .btn-secondary:hover { background: var(--color-border, #444); }
-      .btn-outline-green { background: transparent; color: #1abc9c; border: 1px solid #1abc9c; }
-      .btn-outline-amber { background: transparent; color: #f59e0b; border: 1px solid #f59e0b; }
-      .resolved-tag { font-size: 0.75rem; font-style: italic; color: var(--color-text-secondary, #999); }
       .slot-cell {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        min-width: 70px; cursor: pointer; user-select: none;
+        min-width: 60px; cursor: pointer; user-select: none;
       }
       .slot-cell:hover { opacity: 0.8; }
-      .slot-cell-placeholder { font-size: 0.7rem; color: #f59e0b; font-weight: 600; }
-      .actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+      .slot-cell-placeholder { font-size: 0.65rem; color: #f59e0b; font-weight: 600; }
+      .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
       .slot-selector-overlay.show { display: block; }
       .slot-selector-popup {
@@ -411,10 +412,11 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         </div>
       </div>
 
-      <div class="sw-message" id="swMessage">${config.message}</div>
-
-      <div id="slotCarousel" class="slot-carousel-section">
-        <span class="slot-carousel-loading">Loading slots…</span>
+      <div class="sw-top">
+        <div class="sw-message" id="swMessage">${config.message}</div>
+        <div id="slotCarousel" class="slot-carousel-section">
+          <span class="slot-carousel-loading">Loading slots…</span>
+        </div>
       </div>
 
       <div class="tools-table-container">
@@ -476,7 +478,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const hasNew = rows.some(function(r) { return r.action === 'add'; });
           const hasUnassigned = rows.some(function(r) { return r.slotStatus === 'unassigned'; });
           const hasAssignable = rows.some(function(r) { return r.action !== 'add' && r.slotStatus === 'unassigned'; });
-          const hasPrepareWork = hasNew || hasAssignable;
+          const hasPrepareWork = hasNew || hasAssignable || hasConflicts;
           const allReady = !hasConflicts && !hasNew && !hasUnassigned;
           const status = hasConflicts ? 'red' : ((hasNew || hasUnassigned) ? 'yellow' : 'green');
           return { status: status, allReady: allReady, hasNew: hasNew, hasAssignable: hasAssignable, hasPrepareWork: hasPrepareWork };
@@ -510,27 +512,22 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         function renderTable() {
           const tbody = document.getElementById('toolsTableBody');
           tbody.innerHTML = rows.map(function(r, idx) {
-            const gcodeCell = '<div><strong>' + escapeHtml(r.mappedType) + '</strong> <span style="opacity:0.6">(' + escapeHtml(r.type) + ')</span> — ' +
-              r.diameter.toFixed(2) + ' mm</div><div>' + escapeHtml(r.description) + '</div>';
+            const gcodeCell = '<strong>' + escapeHtml(r.mappedType) + '</strong> <span style="opacity:0.6">(' + escapeHtml(r.type) + ')</span> — ' +
+              r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description);
 
             let syncCell = '<span class="row-status-badge row-status-badge--' + r.statusClass + '">' +
               escapeHtml(r.statusLabel) + '</span>';
 
             if (r.action === 'conflict') {
+              // No user choice here - conflicts are always auto-resolved
+              // using the G-code's values when "Add Tools & Auto-Assign
+              // Slots" runs. This is purely informational so the user can
+              // see what's about to change.
               syncCell += '<div class="conflict-diff">' +
                 '<div class="lib-val">Library: ' + escapeHtml(r.libType) + ' — ' +
                   (r.libDiameter !== null ? r.libDiameter.toFixed(2) : '?') + ' mm — ' + escapeHtml(r.libDescription) + '</div>' +
-                '<div class="gcode-val">G-code: ' + escapeHtml(r.mappedType) + ' — ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</div>' +
+                '<div class="gcode-val">Will use: ' + escapeHtml(r.mappedType) + ' — ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</div>' +
               '</div>';
-
-              if (r.resolved) {
-                syncCell += '<div class="resolved-tag">Resolved: ' + (r.resolved === 'gcode' ? 'used G-code value' : 'kept library value') + '</div>';
-              } else {
-                syncCell += '<div class="conflict-actions">' +
-                  '<button class="btn btn-sm btn-outline-green" data-action="use-gcode" data-idx="' + idx + '">Use G-code</button>' +
-                  '<button class="btn btn-sm btn-outline-amber" data-action="keep-library" data-idx="' + idx + '">Keep Library</button>' +
-                '</div>';
-              }
             }
 
             let slotCell;
@@ -542,13 +539,13 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               slotCell = '<div class="slot-cell" data-slot-idx="' + idx + '"><span class="slot-cell-placeholder">Assign Slot</span></div>';
             }
 
-            return '<tr><td class="tool-num">' + r.toolNumber + '</td><td>' + gcodeCell + '</td><td>' + syncCell + '</td><td>' + slotCell + '</td></tr>';
+            return '<tr><td class="tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td>' + syncCell + '</td><td>' + slotCell + '</td></tr>';
           }).join('');
         }
 
         function updateBanner() {
           const cfg = {
-            red: { color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found', msg: 'Some tools in this file don\\'t match the ncSender Tool Library. Resolve each conflict below before loading.' },
+            red: { color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found', msg: 'Some tools in this file don\\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\\'s values automatically.' },
             yellow: { color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention', msg: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".' },
             green: { color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready', msg: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.' }
           };
@@ -679,11 +676,6 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               row.pocketNumber = pocketNumber;
               row.slotStatus = pocketNumber !== null ? 'assigned' : 'unassigned';
 
-              if (row.resolved) {
-                row.action = 'match'; row.statusClass = 'gray'; row.statusLabel = 'In Sync';
-                return;
-              }
-
               const typeMatch = libType.toLowerCase() === row.mappedType.toLowerCase();
               const diaMatch = !isNaN(libDiameterNum) && Math.abs(libDiameterNum - row.diameter) < 0.005;
               const descMatch = libDescription.toUpperCase() === row.description.toUpperCase();
@@ -705,41 +697,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
         // === Conflict resolution + slot cell clicks ===
 
-        document.getElementById('toolsTableBody').addEventListener('click', async function(e) {
-          const conflictBtn = e.target.closest('button[data-action]');
-          if (conflictBtn) {
-            const idx = parseInt(conflictBtn.getAttribute('data-idx'), 10);
-            const row = rows[idx];
-            if (!row) return;
-            const action = conflictBtn.getAttribute('data-action');
-            conflictBtn.disabled = true;
-
-            try {
-              if (action === 'use-gcode') {
-                const rawLibTool = toolLibrary[row.toolNumber] || {};
-                const res = await fetch('/api/tools/' + row.libId, {
-                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(Object.assign({}, rawLibTool, {
-                    type: row.mappedType, diameter: row.diameter, name: row.description
-                  }))
-                });
-                if (res.ok) {
-                  row.resolved = 'gcode';
-                } else {
-                  const errText = await res.text().catch(function() { return res.statusText; });
-                  alert('Failed to update tool #' + row.toolNumber + ': ' + errText);
-                }
-              } else if (action === 'keep-library') {
-                row.resolved = 'library';
-              }
-            } catch (err) {
-              alert('Failed to resolve tool #' + row.toolNumber + ': ' + (err && err.message ? err.message : err));
-            } finally {
-              await refreshFromServer();
-            }
-            return;
-          }
-
+        document.getElementById('toolsTableBody').addEventListener('click', function(e) {
           const slotCell = e.target.closest('.slot-cell');
           if (slotCell) {
             const idx = parseInt(slotCell.getAttribute('data-slot-idx'), 10);
@@ -796,7 +754,39 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           return { failures: failures, firstError: firstError };
         }
 
-        // === Step 2: Auto-assign every library tool that still has no slot ===
+        // === Step 2: Auto-resolve every conflict using the G-code's values ===
+        //
+        // No user choice here by design - conflicts always resolve to the
+        // G-code's type/diameter/description. The table still shows the
+        // library-vs-G-code diff for transparency before this runs.
+        async function resolveConflictsWithGcode() {
+          const conflictRows = rows.filter(function(r) { return r.action === 'conflict'; });
+          let failures = 0;
+          let firstError = null;
+
+          for (const row of conflictRows) {
+            const rawLibTool = toolLibrary[row.toolNumber] || {};
+            try {
+              const res = await fetch('/api/tools/' + row.libId, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({}, rawLibTool, {
+                  type: row.mappedType, diameter: row.diameter, name: row.description
+                }))
+              });
+              if (!res.ok) {
+                failures++;
+                if (!firstError) firstError = await res.text().catch(function() { return res.statusText; });
+              }
+            } catch (err) {
+              failures++;
+              if (!firstError) firstError = err && err.message ? err.message : String(err);
+            }
+          }
+
+          return { failures: failures, firstError: firstError };
+        }
+
+        // === Step 3: Auto-assign every library tool that still has no slot ===
         //
         // If the magazine doesn't have enough empty slots, tools currently
         // occupying a slot but NOT used anywhere in this G-code file are
@@ -915,14 +905,18 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const addResult = await addNewToolsToLibrary();
           await refreshFromServer();
 
+          prepareBtn.textContent = 'Resolving conflicts…';
+          const conflictResult = await resolveConflictsWithGcode();
+          await refreshFromServer();
+
           prepareBtn.textContent = 'Assigning slots…';
           const assignResult = await autoAssignSlots();
           await refreshFromServer();
 
           prepareBtn.textContent = 'Add Tools & Auto-Assign Slots';
 
-          const totalFailures = addResult.failures + (assignResult ? assignResult.failures : 0);
-          const firstError = addResult.firstError || (assignResult && assignResult.firstError);
+          const totalFailures = addResult.failures + conflictResult.failures + (assignResult ? assignResult.failures : 0);
+          const firstError = addResult.firstError || conflictResult.firstError || (assignResult && assignResult.firstError);
 
           if (assignResult && assignResult.ranOutOfSlots) {
             alert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually.');

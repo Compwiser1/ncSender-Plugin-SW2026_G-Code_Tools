@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.3.0
+**Version**: 1.4.0
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -53,7 +53,7 @@ Unlike pure library maintenance, this dialog opens **every time** a file has too
 1. Load a SolidWorks 2026 / FrankenOKO G-code file with a tool summary table.
 2. The dialog opens automatically, showing every tool's sync status and slot assignment.
 3. Click **Add Tools & Auto-Assign Slots** to prepare everything at once — or use the table to add/resolve/assign individual tools if you'd rather do it by hand.
-4. Resolve any tools still marked Conflict (Use G-code / Keep Library).
+4. Conflicts (if any) resolve automatically to the G-code's values as part of step 3 — no choice needed, the diff shown is just for your reference.
 5. Adjust anything you'd like — click any tool's **Slot** badge to reassign it manually; if the target slot is occupied, you'll see "Swap with #XX."
 6. Once the banner turns green and **Load** is enabled, click it to translate the G-code and load the mapped version.
 7. Or click **Bypass** at any point to skip mapping and load the file unmapped.

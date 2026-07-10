@@ -1,3 +1,8 @@
+## v1.4.0
+
+- **Conflicts no longer require a choice.** Removed the "Use G-code" / "Keep Library" buttons — conflicts always resolve to the G-code's values automatically when "Add Tools & Auto-Assign Slots" runs. The table still shows the library-vs-G-code diff for transparency before that happens; there's just nothing to click anymore.
+- **Redesigned the dialog to be wider and more compact.** Widened from ~820px to ~1180px, and restructured the layout so the status message and slot carousel sit side by side instead of stacked, with tighter padding and smaller row heights throughout. Goal: all 8 magazine slots visible at once without scrolling, on a typical desktop window.
+
 ## v1.3.0
 
 - **Simplified the dialog to three buttons.** "Add New Tools to Library" and "Auto-Assign Slots" are now one button — **"Add Tools & Auto-Assign Slots"** — that runs both steps back to back: adds every new tool to the library, then fills every unassigned slot (evicting unused tools if the magazine's full, same confirmation as before).
