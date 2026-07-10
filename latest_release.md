@@ -1,3 +1,10 @@
+## v1.7.0
+
+- **Confirmed (no code change needed):** slot reassignment already works at any time, including after "Add Tools & Auto-Assign Slots" completes or once the file shows "All Tools Ready" - click any tool's Slot value in the table to reassign it.
+- **Confirmed (no code change needed):** table headers were already centered (Tool #, Status, Slot) except "Program Tool Information," which stays left-aligned to match its content.
+- **Instructions rewritten and made collapsible.** Each status (conflicts / needs attention / ready) now has a short one-line summary shown by default, plus a "Show details ▾" toggle that expands a fuller paragraph explaining what the status means, why it happens, and exactly what each button does - without permanently using up vertical space in the dialog.
+- **Added a "Program Name" label** above the G-code filename in the header. The filename is now centered and one size larger than before.
+
 ## v1.6.1
 
 - **Fix: table rows had no explicit height in the real plugin.** The mockups I used to design v1.6.0 had row heights baked in, but that detail didn't make it into the actual `renderTable()` code — rows were rendering at nearly zero height, making the table look broken with real data. Rows are now a fixed 64px tall.

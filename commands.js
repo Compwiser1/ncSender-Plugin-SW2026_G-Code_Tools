@@ -279,17 +279,20 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     red: {
       color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
       title: 'Tool Library Conflicts Found',
-      message: 'Some tools in this file don\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\'s values automatically.'
+      message: 'Some tools in this file don\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\'s values automatically.',
+      details: 'A conflict means the tool number in this G-code file already exists in your ncSender Tool Library, but with a different type, diameter, or description than what\'s specified here - this usually happens when a tool number gets reused for a different bit over time. Clicking "Add Tools & Auto-Assign Slots" updates the library to match this file\'s values automatically; no manual choice is needed, since the G-code is always treated as the source of truth. You can review exactly what will change in the Status column before it happens. A resolved tool still needs a magazine slot assigned before this file can be loaded.'
     },
     yellow: {
       color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.1)', icon: '🟡',
       title: 'Tools Need Attention',
-      message: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".'
+      message: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".',
+      details: 'This file references tools that either aren\'t in your ncSender Tool Library yet, or are in the library but haven\'t been assigned to a physical ATC magazine slot. Clicking "Add Tools & Auto-Assign Slots" handles both steps in one click: it adds any missing tools to the library, then fills empty slots for anything that still needs one. If the magazine is full, it automatically frees up slots occupied by tools this file doesn\'t need - you\'ll be asked to confirm before anything is cleared. You can also click any tool\'s Slot value directly at any time, including after auto-assign has run, to manually assign or reassign it. Once every tool is in the library and has a slot, "Load" becomes enabled.'
     },
     green: {
       color: '#28a745', bgColor: 'rgba(40, 167, 69, 0.1)', icon: '🟢',
       title: 'All Tools Ready',
-      message: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.'
+      message: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.',
+      details: 'All tools referenced in this file are in your ncSender Tool Library and have a magazine slot assigned. Clicking "Load" rewrites this file\'s tool references to match your actual slot assignments (for example, T18 M06 becomes T3 M06) and reloads the translated file, so the ATC moves to the correct physical position during the job. If you\'d still like to change a tool\'s slot assignment, click its Slot value in the table - you can do this at any time, including right now before clicking Load.'
     }
   };
   const config = statusConfig[status];
@@ -314,17 +317,30 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         display: flex; align-items: center; justify-content: space-between;
         flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
       }
-      .sw-filename { color: var(--color-text-secondary); font-size: 0.8rem; word-break: break-all; }
+      .sw-progname-block { text-align: center; flex: 1 1 auto; min-width: 0; }
+      .sw-progname-label {
+        font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--color-text-secondary, #999); margin-bottom: 2px;
+      }
+      .sw-filename { color: var(--color-text-primary, #e0e0e0); font-size: 0.9rem; word-break: break-all; }
       .sw-banner {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 6px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;
         background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
+        flex-shrink: 0;
       }
       .sw-message {
         background: var(--color-surface-muted, #1a1a1a);
         padding: 10px 14px; border-radius: 8px; line-height: 1.4; font-size: 0.85rem;
         margin-bottom: 10px;
       }
+      .sw-message-summary { margin: 0; }
+      .sw-message-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border, #333); color: var(--color-text-secondary, #ccc); }
+      .sw-message-toggle {
+        background: none; border: none; color: var(--color-accent, #1abc9c); font-size: 0.78rem;
+        font-weight: 600; cursor: pointer; padding: 6px 0 0; margin: 0;
+      }
+      .sw-message-toggle:hover { text-decoration: underline; }
       .sw-main {
         display: flex; gap: 0; align-items: stretch;
         background: var(--color-surface-muted, #1a1a1a);
@@ -393,14 +409,21 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
     <div class="sw-container">
       <div class="sw-header">
-        <div class="sw-filename">${filename || 'G-Code File'}</div>
+        <div class="sw-progname-block">
+          <div class="sw-progname-label">Program Name</div>
+          <div class="sw-filename">${filename || 'G-Code File'}</div>
+        </div>
         <div class="sw-banner" id="swBanner">
           <span id="swIcon">${config.icon}</span>
           <span id="swTitle">${config.title}</span>
         </div>
       </div>
 
-      <div class="sw-message" id="swMessage">${config.message}</div>
+      <div class="sw-message" id="swMessage">
+        <div class="sw-message-summary" id="swMessageSummary">${config.message}</div>
+        <div class="sw-message-details" id="swMessageDetails" style="display:none;">${config.details}</div>
+        <button type="button" class="sw-message-toggle" id="swMessageToggle">Show details &#9662;</button>
+      </div>
 
       <div class="sw-main">
         <div class="tools-table-container" id="toolsTableContainer">
@@ -622,9 +645,21 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
         function updateBanner() {
           const cfg = {
-            red: { color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found', msg: 'Some tools in this file don\\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\\'s values automatically.' },
-            yellow: { color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention', msg: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".' },
-            green: { color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready', msg: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.' }
+            red: {
+              color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found',
+              msg: 'Some tools in this file don\\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\\'s values automatically.',
+              details: 'A conflict means the tool number in this G-code file already exists in your ncSender Tool Library, but with a different type, diameter, or description than what\\'s specified here - this usually happens when a tool number gets reused for a different bit over time. Clicking "Add Tools & Auto-Assign Slots" updates the library to match this file\\'s values automatically; no manual choice is needed, since the G-code is always treated as the source of truth. You can review exactly what will change in the Status column before it happens. A resolved tool still needs a magazine slot assigned before this file can be loaded.'
+            },
+            yellow: {
+              color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention',
+              msg: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".',
+              details: 'This file references tools that either aren\\'t in your ncSender Tool Library yet, or are in the library but haven\\'t been assigned to a physical ATC magazine slot. Clicking "Add Tools & Auto-Assign Slots" handles both steps in one click: it adds any missing tools to the library, then fills empty slots for anything that still needs one. If the magazine is full, it automatically frees up slots occupied by tools this file doesn\\'t need - you\\'ll be asked to confirm before anything is cleared. You can also click any tool\\'s Slot value directly at any time, including after auto-assign has run, to manually assign or reassign it. Once every tool is in the library and has a slot, "Load" becomes enabled.'
+            },
+            green: {
+              color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready',
+              msg: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.',
+              details: 'All tools referenced in this file are in your ncSender Tool Library and have a magazine slot assigned. Clicking "Load" rewrites this file\\'s tool references to match your actual slot assignments (for example, T18 M06 becomes T3 M06) and reloads the translated file, so the ATC moves to the correct physical position during the job. If you\\'d still like to change a tool\\'s slot assignment, click its Slot value in the table - you can do this at any time, including right now before clicking Load.'
+            }
           };
           const s = currentStatus();
           const c = cfg[s.status];
@@ -635,11 +670,21 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           banner.style.color = c.color;
           document.getElementById('swIcon').textContent = c.icon;
           document.getElementById('swTitle').textContent = c.title;
-          document.getElementById('swMessage').textContent = c.msg;
+          document.getElementById('swMessageSummary').textContent = c.msg;
+          document.getElementById('swMessageDetails').textContent = c.details;
 
           document.getElementById('prepareBtn').disabled = !s.hasPrepareWork;
           document.getElementById('mapBtn').disabled = !s.allReady;
         }
+
+        // === Collapsible instructions toggle ===
+        document.getElementById('swMessageToggle').addEventListener('click', function() {
+          const details = document.getElementById('swMessageDetails');
+          const toggle = document.getElementById('swMessageToggle');
+          const isHidden = details.style.display === 'none';
+          details.style.display = isHidden ? 'block' : 'none';
+          toggle.innerHTML = isHidden ? 'Hide details &#9652;' : 'Show details &#9662;';
+        });
 
         // === Slot selector popup (adapted from Dynamic Tool Slot Mapper) ===
 
