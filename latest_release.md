@@ -1,3 +1,12 @@
+## v1.6.0
+
+- **Redesigned the slot graphic to match a real RapidChange ATC magazine strip.** Scalloped casing (overlapping-circle technique, calibrated against an actual reference photo), gray bezel rings, slot numbers 1-N labeled down the left side, and a "TLS" base mount with mounting knob at the bottom — all generated dynamically from your actual magazine size, not hardcoded to 8.
+- Occupied slots show a two-line "Tool #" / tool-number label, colored by sync status: **green** for In Sync, **orange** for Conflict. **Only In Sync and Conflict tools ever occupy a slot in the graphic — "New" (not-yet-added) tools never appear there**, since they can't really be in a magazine slot yet.
+- The left-side slot number (1-N) is colored to match its occupant's status too (green/orange), staying neutral white when the slot is empty or holds an unresolved "New" tool.
+- **Table redesigned to sit directly beside the graphic**, separated by a divider border, with its height locked exactly to the graphic's height (no independent sizing, no drift between the two). Extra rows scroll inside that fixed region instead of growing the dialog.
+- Table columns renamed/restyled: "G-Code Data" → **"Program Tool Information"**, "Sync" → **"Status"**. Tool # and Slot columns centered and narrowed; Program Tool Information widened to use the freed space. Header text enlarged and set to bright white for contrast.
+- Program Tool Information's second line drops the leading dash and truncates with an ellipsis instead of overflowing if it's ever too long.
+
 ## v1.5.0
 
 - Moved the slot carousel below the status message instead of side-by-side — the two-column layout from v1.4.0 made the carousel too cramped.

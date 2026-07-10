@@ -320,47 +320,37 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         padding: 6px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;
         background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
       }
-      .sw-top {
-        display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
-      }
       .sw-message {
         background: var(--color-surface-muted, #1a1a1a);
         padding: 10px 14px; border-radius: 8px; line-height: 1.4; font-size: 0.85rem;
-        display: flex; align-items: center;
+        margin-bottom: 10px;
       }
-      .slot-carousel-section {
-        display: flex; align-items: center; justify-content: center; gap: 5px;
-        padding: 8px; background: var(--color-surface-muted, #1a1a1a);
-        border-radius: 8px; flex-wrap: nowrap;
+      .sw-main {
+        display: flex; gap: 0; align-items: stretch;
+        background: var(--color-surface-muted, #1a1a1a);
+        border-radius: 8px; padding: 8px; margin-bottom: 10px; overflow: hidden;
       }
-      .slot-carousel-loading { color: var(--color-text-secondary, #999); font-size: 0.8rem; font-style: italic; }
-      .slot-box {
-        display: flex; flex-direction: column; align-items: center;
-        min-width: 0; flex: 1 1 0; height: 44px;
-        background: var(--color-surface, #0a0a0a);
-        border: 2px solid var(--color-border, #444);
-        border-radius: 5px; overflow: hidden; flex-shrink: 0;
-      }
-      .slot-box--used { background: var(--color-accent, #1abc9c); border-color: var(--color-accent, #1abc9c); }
-      .slot-box--unused { background: var(--color-surface-muted, #2a2a2a); border-color: var(--color-border, #444); opacity: 0.5; }
-      .slot-box-content { display: flex; align-items: center; justify-content: center; flex: 1; width: 100%; padding: 0 4px; }
-      .slot-tool-id { font-size: 0.85rem; font-weight: 700; color: #fff; }
-      .slot-empty { font-size: 1rem; color: var(--color-text-secondary, #666); }
-      .slot-box-label {
-        font-size: 0.55rem; font-weight: 700; text-transform: uppercase;
-        color: var(--color-text-secondary, #999); background: var(--color-surface-muted, #1a1a1a);
-        width: 100%; text-align: center; padding: 1px 0; letter-spacing: 0.02em;
-      }
-      .slot-box--used .slot-box-label { background: color-mix(in srgb, var(--color-accent, #1abc9c) 80%, #000); color: rgba(255,255,255,0.95); }
       .tools-table-container {
-        border: 1px solid var(--color-border, #444); border-radius: 8px; margin-bottom: 10px;
+        flex: 1 1 auto; min-width: 0;
+        overflow-y: auto;
+        border-right: 1px solid var(--color-border, #3a3f45);
+        padding-right: 8px;
       }
+      .tools-table-container::-webkit-scrollbar { width: 10px; }
+      .tools-table-container::-webkit-scrollbar-track { background: var(--color-surface, #1a1c1e); }
+      .tools-table-container::-webkit-scrollbar-thumb { background: #565a5f; border-radius: 5px; }
+      .tools-table-container::-webkit-scrollbar-thumb:hover { background: #6b6f74; }
       .tools-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      .tools-table thead { background: var(--color-surface-muted, #1a1a1a); }
-      .tools-table th { padding: 5px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #444); font-size: 0.75rem; }
-      .tools-table td { padding: 4px 10px; border-bottom: 1px solid var(--color-border, #333); vertical-align: middle; font-size: 0.82rem; }
+      .tools-table thead { position: sticky; top: 0; background: var(--color-surface-muted-2, #1f2327); z-index: 1; }
+      .tools-table th { padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #3a3f45); font-size: 0.875rem; color: #ffffff; white-space: nowrap; }
+      .tools-table td { padding: 4px 8px; border-bottom: 1px solid var(--color-border, #2a2e33); vertical-align: middle; font-size: 0.82rem; }
       .tools-table tbody tr:hover { background: var(--color-border, #2a2a2a); }
-      .gcode-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1px; }
+      .col-toolnum { text-align: center; }
+      .col-status { text-align: center; }
+      .col-slot { text-align: center; }
+      .gcode-cell { overflow: hidden; }
+      .gcode-cell .gc-type { font-weight: 700; }
+      .gcode-cell .gc-detail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; font-style: italic; font-size: 0.85em; }
       .row-status-badge {
         display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem;
         font-weight: 600; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap;
@@ -368,7 +358,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; }
       .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; }
       .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; }
-      .tool-num { font-weight: 700; font-size: 0.9rem; }
+      .tool-num { font-weight: 700; }
       .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
       .conflict-diff .lib-val { color: #f59e0b; }
       .conflict-diff .gcode-val { color: #1abc9c; }
@@ -379,11 +369,10 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
       .btn-secondary:hover { background: var(--color-border, #444); }
       .slot-cell {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        min-width: 60px; cursor: pointer; user-select: none;
+        cursor: pointer; user-select: none; font-weight: 700;
       }
       .slot-cell:hover { opacity: 0.8; }
-      .slot-cell-placeholder { font-size: 0.65rem; color: #f59e0b; font-weight: 600; }
+      .slot-cell-placeholder { font-size: 0.65rem; color: #f59e0b; font-weight: 600; cursor: pointer; }
       .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
       .slot-selector-overlay.show { display: block; }
@@ -411,31 +400,29 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         </div>
       </div>
 
-      <div class="sw-top">
-        <div class="sw-message" id="swMessage">${config.message}</div>
-        <div id="slotCarousel" class="slot-carousel-section">
-          <span class="slot-carousel-loading">Loading slots…</span>
-        </div>
-      </div>
+      <div class="sw-message" id="swMessage">${config.message}</div>
 
-      <div class="tools-table-container">
-        <table class="tools-table">
-          <colgroup>
-            <col style="width: 6%;">
-            <col style="width: 54%;">
-            <col style="width: 28%;">
-            <col style="width: 12%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Tool #</th>
-              <th>G-Code Data</th>
-              <th>Sync Status</th>
-              <th>Slot</th>
-            </tr>
-          </thead>
-          <tbody id="toolsTableBody"></tbody>
-        </table>
+      <div class="sw-main">
+        <div class="tools-table-container" id="toolsTableContainer">
+          <table class="tools-table">
+            <colgroup>
+              <col style="width: 11%;">
+              <col style="width: 50%;">
+              <col style="width: 24%;">
+              <col style="width: 15%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="col-toolnum">Tool #</th>
+                <th>Program Tool Information</th>
+                <th class="col-status">Status</th>
+                <th class="col-slot">Slot</th>
+              </tr>
+            </thead>
+            <tbody id="toolsTableBody"></tbody>
+          </table>
+        </div>
+        <div id="slotCarousel"></div>
       </div>
 
       <div class="actions">
@@ -453,6 +440,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     </div>
 
     <script>
+
       (function() {
         const rows = ${JSON.stringify(rows)};
         const toolLibrary = ${JSON.stringify(dialogToolLibrary)};
@@ -490,28 +478,82 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         }
 
         function renderCarousel() {
-          const usedToolNumbers = new Set(rows.map(function(r) { return r.toolNumber; }));
-          let html = '';
-          for (let i = 1; i <= magazineSize; i++) {
-            const rowInSlot = rows.find(function(r) { return r.pocketNumber === i; });
-            const toolInSlot = Object.values(toolLibrary).find(function(t) { return t.toolNumber === i; });
+          // Locked visual constants from the approved design.
+          const PITCH = 80;
+          const FIRST_CY = 54;
+          const BULGE_R = 52;
+          const BEZEL_R = 41;
+          const INNER_R = 35;
+          const CAP_GAP = 42;   // gap between last bulge center and cap top (allows slight overlap)
+          const CAP_H = 53;
+          const CAP_W = 88;
+          const BOTTOM_PAD = 3;
+          const SVG_W = 150;
 
-            let displayId = null;
-            if (rowInSlot) displayId = rowInSlot.toolNumber;
-            else if (toolInSlot) displayId = toolInSlot.toolId;
+          const n = Math.max(magazineSize, 1);
+          const lastCy = FIRST_CY + (n - 1) * PITCH;
+          const capTop = lastCy + CAP_GAP;
+          const capBottom = capTop + CAP_H;
+          const svgH = capBottom + BOTTOM_PAD;
+          const knobCy = capTop + 29;
+          const tlsY = capTop + 33;
+          const cx = 98;
 
-            const isUsed = rowInSlot ? usedToolNumbers.has(rowInSlot.toolNumber) : false;
-            const cls = displayId !== null ? (isUsed ? 'slot-box--used' : 'slot-box--unused') : '';
-            const content = displayId !== null
-              ? '<span class="slot-tool-id">#' + displayId + '</span>'
-              : '<span class="slot-empty">—</span>';
+          // Only tools that are actually in the library and confirmed
+          // in-sync or flagged conflict occupy a physical slot visually -
+          // "New" tools (not yet added) never appear here, since they
+          // can't really be in a magazine slot yet.
+          const bySlot = {};
+          rows.forEach(function(r) {
+            if (r.action === 'add') return;
+            if (r.pocketNumber === null || r.pocketNumber === undefined) return;
+            bySlot[r.pocketNumber] = r;
+          });
 
-            html += '<div class="slot-box ' + cls + '">' +
-                      '<div class="slot-box-content">' + content + '</div>' +
-                      '<div class="slot-box-label">SLOT' + i + '</div>' +
-                    '</div>';
+          let defs = '<defs><linearGradient id="swCaseGrad" x1="0" y1="0" x2="1" y2="0">' +
+            '<stop offset="0%" stop-color="#4a4d50"/><stop offset="45%" stop-color="#383b3e"/><stop offset="100%" stop-color="#222426"/>' +
+            '</linearGradient></defs>';
+
+          let bulges = '';
+          let bezels = '';
+          let inner = '';
+          let digits = '';
+
+          for (let i = 1; i <= n; i++) {
+            const cy = FIRST_CY + (n - i) * PITCH; // slot n at top, slot 1 at bottom
+            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="url(#swCaseGrad)"/>';
+            bezels += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BEZEL_R + '" fill="#6b6f74"/>';
+
+            const occ = bySlot[i];
+            let digitColor = '#e8e8e6';
+
+            if (occ && occ.action === 'match') {
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#22c55e"/>' +
+                '<text x="' + cx + '" y="' + (cy - 5) + '" text-anchor="middle" font-size="13" fill="#0a2c14">Tool #</text>' +
+                '<text x="' + cx + '" y="' + (cy + 19) + '" text-anchor="middle" font-weight="700" font-size="24" fill="#0a2c14">' + occ.toolNumber + '</text>';
+              digitColor = '#22c55e';
+            } else if (occ && occ.action === 'conflict') {
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#f2a623"/>' +
+                '<text x="' + cx + '" y="' + (cy - 5) + '" text-anchor="middle" font-size="13" fill="#3d2500">Tool #</text>' +
+                '<text x="' + cx + '" y="' + (cy + 19) + '" text-anchor="middle" font-weight="700" font-size="24" fill="#3d2500">' + occ.toolNumber + '</text>';
+              digitColor = '#f2a623';
+            } else {
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#0e1113"/>' +
+                '<text x="' + cx + '" y="' + (cy + 8) + '" text-anchor="middle" font-size="18" fill="#5a5f66">&#8212;</text>';
+            }
+
+            digits += '<text x="24" y="' + (cy + 8) + '" text-anchor="middle" font-weight="700" font-size="20" fill="' + digitColor + '">' + i + '</text>';
           }
-          carousel.innerHTML = html;
+
+          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="10" fill="url(#swCaseGrad)"/>' +
+            '<circle cx="' + cx + '" cy="' + knobCy + '" r="17" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
+            '<text x="24" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="15" fill="#e8e8e6">TLS</text>';
+
+          carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
+            defs + bulges + bezels + cap + inner + digits + '</svg>';
+
+          const tableContainer = document.getElementById('toolsTableContainer');
+          if (tableContainer) tableContainer.style.height = svgH + 'px';
         }
 
         function titleCase(s) {
@@ -528,8 +570,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             const combinedType = (mappedTitled.toLowerCase() === rawTitled.toLowerCase())
               ? mappedTitled
               : mappedTitled + ' ' + rawTitled;
-            const gcodeCell = '<strong>' + escapeHtml(combinedType) + '</strong> ' +
-              '<em>— ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</em>';
+            const gcodeCell = '<span class="gc-type">' + escapeHtml(combinedType) + '</span>' +
+              '<span class="gc-detail">' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</span>';
 
             let syncCell = '<span class="row-status-badge row-status-badge--' + r.statusClass + '">' +
               escapeHtml(r.statusLabel) + '</span>';
@@ -548,14 +590,14 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
             let slotCell;
             if (r.action === 'add') {
-              slotCell = '<div class="slot-cell-placeholder">Add tool first</div>';
+              slotCell = '<span class="slot-cell-placeholder">Add tool first</span>';
             } else if (r.pocketNumber !== null && r.pocketNumber !== undefined) {
-              slotCell = '<div class="slot-cell" data-slot-idx="' + idx + '"><span class="tool-num">SLOT' + r.pocketNumber + '</span></div>';
+              slotCell = '<span class="slot-cell tool-num" data-slot-idx="' + idx + '">' + r.pocketNumber + '</span>';
             } else {
-              slotCell = '<div class="slot-cell" data-slot-idx="' + idx + '"><span class="slot-cell-placeholder">Assign Slot</span></div>';
+              slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            return '<tr><td class="tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td>' + syncCell + '</td><td>' + slotCell + '</td></tr>';
+            return '<tr><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
           }).join('');
         }
 
