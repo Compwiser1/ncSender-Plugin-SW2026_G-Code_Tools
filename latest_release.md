@@ -1,3 +1,10 @@
+## v1.3.0
+
+- **Simplified the dialog to three buttons.** "Add New Tools to Library" and "Auto-Assign Slots" are now one button — **"Add Tools & Auto-Assign Slots"** — that runs both steps back to back: adds every new tool to the library, then fills every unassigned slot (evicting unused tools if the magazine's full, same confirmation as before).
+- After that button runs, the table still reflects live state, so you can review and adjust anything — resolve a conflict, manually reassign a specific slot — before clicking **"Load"** (renamed from "Map Tools & Load") to translate the G-code and run the file.
+- **"Bypass"** is unchanged — skips everything and loads the file as-is.
+- No behavior change to the underlying add/assign/conflict/translation logic from v1.2.0 - this is a UI consolidation only.
+
 ## v1.2.0
 
 - **New: Auto-Assign Slots.** A new button next to "Add New Tools to Library" fills every tool that's in the library but has no magazine slot yet, automatically.

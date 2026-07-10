@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.2.0
+**Version**: 1.3.0
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -23,7 +23,7 @@ Parses the tool summary table SolidWorks 2026 / FrankenOKO writes at the bottom 
 ```
 
 Reconciles it against the ncSender Tool Library:
-- **🟢 New** — not in the library yet. Add all new tools in one click.
+- **🟢 New** — not in the library yet.
 - **🔴 Conflict** — in the library but type/diameter/description differ from the G-code. Flagged for manual resolution (**Use G-code** or **Keep Library**) — nothing is ever overwritten automatically.
 - **⚪ In Sync** — already matches.
 
@@ -32,10 +32,11 @@ SolidWorks' tool-type vocabulary (`ENDMILL`, `CENTER DRILL`, `COUNTERSINK`, etc.
 ### 2. Slot Mapping
 Once a tool is in the library, click its **Slot** badge to open a picker and assign it to a physical ATC magazine slot. A visual carousel shows the whole magazine layout. If the target slot is already occupied by a different tool, the plugin automatically performs a 3-step swap so both tools end up correctly placed.
 
-Click **"Auto-Assign Slots"** to fill every unassigned tool automatically instead of assigning one at a time. If the magazine doesn't have enough empty slots, tools occupying a slot but not used anywhere in this file are evicted (cleared from their slot, not deleted from the library) to make room — you'll see exactly what will be evicted and have to confirm before anything happens. Tools this file actually needs are never evicted.
+### 3. Add Tools & Auto-Assign Slots
+One button handles both of the above at once: adds every new tool to the library, then fills every unassigned slot automatically. If the magazine doesn't have enough empty slots, tools occupying a slot but not used anywhere in this file are evicted (cleared from their slot, not deleted from the library) to make room — you'll see exactly what will be evicted and have to confirm before anything happens. Tools this file actually needs are never evicted. After it runs, the table still reflects live state, so you can adjust anything manually (resolve a conflict, reassign a specific slot) before loading.
 
-### 3. G-code Translation
-Once every tool is in the library, has no conflicts, and has a slot assigned, **"Map Tools & Load"** becomes enabled. Clicking it rewrites every `T##`/`H##` reference in the file to the assigned slot number (e.g. `T18 M06` → `T3 M06`, with the original tool number preserved in a comment) and reloads the translated file — so the ATC actually moves to the correct physical position.
+### 4. Load (G-code Translation)
+Once every tool is in the library, has no conflicts, and has a slot assigned, **"Load"** becomes enabled. Clicking it rewrites every `T##`/`H##` reference in the file to the assigned slot number (e.g. `T18 M06` → `T3 M06`, with the original tool number preserved in a comment) and reloads the translated file — so the ATC actually moves to the correct physical position.
 
 **"Bypass"** skips all of this and loads the file exactly as-is.
 
@@ -51,10 +52,10 @@ Unlike pure library maintenance, this dialog opens **every time** a file has too
 
 1. Load a SolidWorks 2026 / FrankenOKO G-code file with a tool summary table.
 2. The dialog opens automatically, showing every tool's sync status and slot assignment.
-3. Click **Add New Tools to Library** for any tools marked New.
-4. Resolve any tools marked Conflict (Use G-code / Keep Library).
-5. Click any tool's **Slot** badge to assign it to a magazine slot. If the slot is occupied, you'll see "Swap with #XX" — selecting it swaps both tools automatically.
-6. Once the banner turns green and **Map Tools & Load** is enabled, click it to translate the G-code and load the mapped version.
+3. Click **Add Tools & Auto-Assign Slots** to prepare everything at once — or use the table to add/resolve/assign individual tools if you'd rather do it by hand.
+4. Resolve any tools still marked Conflict (Use G-code / Keep Library).
+5. Adjust anything you'd like — click any tool's **Slot** badge to reassign it manually; if the target slot is occupied, you'll see "Swap with #XX."
+6. Once the banner turns green and **Load** is enabled, click it to translate the G-code and load the mapped version.
 7. Or click **Bypass** at any point to skip mapping and load the file unmapped.
 
 ---
