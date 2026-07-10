@@ -65,6 +65,13 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
           echo "zip_path=dist/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
 
+          # Also publish an unversioned copy so there's a permanent, stable
+          # install/download URL that always points at the newest release.
+          LATEST_ZIP_NAME="${PLUGIN_ID}-latest.zip"
+          cp "dist/${ZIP_NAME}" "dist/${LATEST_ZIP_NAME}"
+          echo "latest_zip_name=$LATEST_ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "latest_zip_path=dist/${LATEST_ZIP_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Get release notes
         id: notes
         run: |
@@ -84,7 +91,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ steps.manifest.outputs.plugin_id }} v${{ steps.manifest.outputs.version }}
           body: ${{ steps.notes.outputs.body }}
-          files: ${{ steps.zip.outputs.zip_path }}
+          files: |
+            ${{ steps.zip.outputs.zip_path }}
+            ${{ steps.zip.outputs.latest_zip_path }}
           fail_on_unmatched_files: true
 
       # Optional: post a notification when a release goes out. Only runs if
