@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -31,6 +31,8 @@ SolidWorks' tool-type vocabulary (`ENDMILL`, `CENTER DRILL`, `COUNTERSINK`, etc.
 
 ### 2. Slot Mapping
 Once a tool is in the library, click its **Slot** badge to open a picker and assign it to a physical ATC magazine slot. A visual carousel shows the whole magazine layout. If the target slot is already occupied by a different tool, the plugin automatically performs a 3-step swap so both tools end up correctly placed.
+
+Click **"Auto-Assign Slots"** to fill every unassigned tool automatically instead of assigning one at a time. If the magazine doesn't have enough empty slots, tools occupying a slot but not used anywhere in this file are evicted (cleared from their slot, not deleted from the library) to make room — you'll see exactly what will be evicted and have to confirm before anything happens. Tools this file actually needs are never evicted.
 
 ### 3. G-code Translation
 Once every tool is in the library, has no conflicts, and has a slot assigned, **"Map Tools & Load"** becomes enabled. Clicking it rewrites every `T##`/`H##` reference in the file to the assigned slot number (e.g. `T18 M06` → `T3 M06`, with the original tool number preserved in a comment) and reloads the translated file — so the ATC actually moves to the correct physical position.

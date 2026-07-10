@@ -1,9 +1,20 @@
+## v1.2.0
+
+- **New: Auto-Assign Slots.** A new button next to "Add New Tools to Library" fills every tool that's in the library but has no magazine slot yet, automatically.
+  - Only tools already in the library are eligible — add new tools first if the button is grayed out.
+  - If there aren't enough empty magazine slots, tools currently occupying a slot but **not used anywhere in this G-code file** are automatically evicted (their slot cleared, not deleted from the library) to make room. Tools this file actually needs are never evicted.
+  - Before evicting anything, you're shown exactly which slots/tools will be cleared and asked to confirm.
+  - If there still aren't enough slots even after evicting everything possible, you're told so and can finish the remaining assignments manually via the existing click-to-assign slot picker.
+  - Manual slot assignment (clicking a tool's Slot badge) is still available and unchanged — Auto-Assign is a shortcut, not a replacement.
+
 ## v1.1.1
 
-- **Fix: `manifest.json`'s `repository` field pointed to a placeholder URL** (`github.com/cotepat/ncsender-plugin-sw2026-gcode-tools`, left over from adapting Dynamic Tool Slot Mapper's manifest) instead of the actual repo. This silently broke ncSender's in-app "Check for Update" — it was querying a nonexistent repo and getting back nothing, so every field (latest version, download URL, release notes) came back blank. Now points to `github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools`, so the Plugins screen's Update button will work correctly going forward.
+- Fix: `manifest.json`'s `repository` field pointed to a placeholder URL left over from adapting Dynamic Tool Slot Mapper's manifest, instead of this plugin's actual repo. This silently broke ncSender's in-app "Check for Update" button — every field (latest version, download URL, release notes) came back blank because it was querying a repo that doesn't exist. Now points to the correct repository.
+- CI: every release now also publishes an unversioned `com.ncsender.sw2026-gcode-tools-latest.zip` asset alongside the versioned zip, so `.../releases/latest/download/com.ncsender.sw2026-gcode-tools-latest.zip` is a permanent install URL that never needs updating.
 
 ## v1.1.0
 
+- **Fix: `manifest.json`'s `repository` field pointed to a placeholder URL** (`github.com/cotepat/ncsender-plugin-sw2026-gcode-tools`, left over from adapting Dynamic Tool Slot Mapper's manifest) instead of the actual repo. This silently broke ncSender's in-app "Check for Update" — it was querying a nonexistent repo and getting back nothing, so every field (latest version, download URL, release notes) came back blank. Now points to `github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools`, so the Plugins screen's Update button will work correctly going forward.
 - **New: Slot Mapping + G-code Translation.** The Tool Library Sync dialog is now a single unified workflow:
   1. Add new tools to the library and resolve any conflicts (same as v1.0.x)
   2. Assign every tool to a physical ATC magazine slot via a visual slot carousel — click any tool's slot badge to open a picker, with automatic 3-step swapping if the target slot is already occupied by a different tool

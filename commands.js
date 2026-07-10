@@ -433,6 +433,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
       <div class="actions">
         <button id="addNewBtn" class="btn btn-secondary">Add New Tools to Library</button>
+        <button id="autoAssignBtn" class="btn btn-secondary" disabled>Auto-Assign Slots</button>
         <button id="mapBtn" class="btn btn-primary" disabled>Map Tools &amp; Load</button>
         <button id="bypassBtn" class="btn btn-secondary">Bypass</button>
       </div>
@@ -475,9 +476,10 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const hasConflicts = rows.some(function(r) { return r.action === 'conflict'; });
           const hasNew = rows.some(function(r) { return r.action === 'add'; });
           const hasUnassigned = rows.some(function(r) { return r.slotStatus === 'unassigned'; });
+          const hasAssignable = rows.some(function(r) { return r.action !== 'add' && r.slotStatus === 'unassigned'; });
           const allReady = !hasConflicts && !hasNew && !hasUnassigned;
           const status = hasConflicts ? 'red' : ((hasNew || hasUnassigned) ? 'yellow' : 'green');
-          return { status: status, allReady: allReady, hasNew: hasNew };
+          return { status: status, allReady: allReady, hasNew: hasNew, hasAssignable: hasAssignable };
         }
 
         function renderCarousel() {
@@ -562,6 +564,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           document.getElementById('swMessage').textContent = c.msg;
 
           document.getElementById('addNewBtn').disabled = !s.hasNew;
+          document.getElementById('autoAssignBtn').disabled = !s.hasAssignable;
           document.getElementById('mapBtn').disabled = !s.allReady;
         }
 
@@ -754,6 +757,130 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         });
 
         // === Add new tools to library ===
+
+        // === Auto-Assign Slots ===
+        //
+        // Fills every tool that's in the library but has no magazine slot
+        // yet. If the magazine doesn't have enough empty slots, tools
+        // currently occupying a slot but NOT used anywhere in this G-code
+        // file are evicted (their slot cleared) to make room - tools that
+        // this file actually needs are never evicted. The user is shown a
+        // confirmation listing exactly what will be evicted before anything
+        // happens, since this reassigns physical ATC positions that may be
+        // in use by other jobs.
+
+        document.getElementById('autoAssignBtn').addEventListener('click', async function() {
+          const autoAssignBtn = document.getElementById('autoAssignBtn');
+
+          const needed = rows.filter(function(r) { return r.action !== 'add' && r.slotStatus === 'unassigned'; });
+          if (needed.length === 0) return;
+
+          // Tool numbers used anywhere in this G-code file - never evict these.
+          const usedInFile = new Set(rows.map(function(r) { return r.toolNumber; }));
+
+          // Slots already occupied, per the full ncSender library (not just
+          // tools in this file).
+          const occupiedBy = {}; // slot -> library tool object
+          Object.values(toolLibrary).forEach(function(t) {
+            if (t.toolNumber !== null && t.toolNumber !== undefined) {
+              occupiedBy[t.toolNumber] = t;
+            }
+          });
+
+          const emptySlots = [];
+          for (let i = 1; i <= magazineSize; i++) {
+            if (!occupiedBy[i]) emptySlots.push(i);
+          }
+
+          const deficit = needed.length - emptySlots.length;
+          let evictionCandidates = [];
+          if (deficit > 0) {
+            evictionCandidates = Object.keys(occupiedBy)
+              .map(function(s) { return parseInt(s, 10); })
+              .filter(function(slot) { return !usedInFile.has(occupiedBy[slot].toolId); })
+              .sort(function(a, b) { return a - b; })
+              .slice(0, deficit);
+
+            if (evictionCandidates.length > 0) {
+              const evictionList = evictionCandidates.map(function(slot) {
+                return 'Slot ' + slot + ' (tool #' + occupiedBy[slot].toolId + ')';
+              }).join(', ');
+              const proceed = confirm(
+                'Not enough empty slots for all tools in this file.\\n\\n' +
+                'To make room, these slots will be cleared (tools removed from their slot, not deleted from the library):\\n' +
+                evictionList +
+                '\\n\\nContinue?'
+              );
+              if (!proceed) return;
+            }
+          }
+
+          autoAssignBtn.disabled = true;
+          autoAssignBtn.textContent = 'Assigning…';
+
+          let failures = 0;
+          let firstError = null;
+
+          try {
+            // Evict first, freeing their slots.
+            for (const slot of evictionCandidates) {
+              const evictTool = occupiedBy[slot];
+              try {
+                const res = await fetch('/api/tools/' + evictTool.id, {
+                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(Object.assign({}, evictTool, { toolNumber: null }))
+                });
+                if (res.ok) {
+                  emptySlots.push(slot);
+                } else {
+                  failures++;
+                  if (!firstError) firstError = await res.text().catch(function() { return res.statusText; });
+                }
+              } catch (err) {
+                failures++;
+                if (!firstError) firstError = err && err.message ? err.message : String(err);
+              }
+            }
+
+            emptySlots.sort(function(a, b) { return a - b; });
+
+            // Assign each tool that needs a slot to the next free one, in
+            // ascending tool-number order for predictable results.
+            const sortedNeeded = needed.slice().sort(function(a, b) { return a.toolNumber - b.toolNumber; });
+            let ranOutOfSlots = false;
+            for (const row of sortedNeeded) {
+              const slot = emptySlots.shift();
+              if (slot === undefined) { ranOutOfSlots = true; break; } // ran out even after eviction
+
+              const libTool = toolLibrary[row.toolNumber];
+              if (!libTool) { failures++; continue; }
+
+              try {
+                const res = await fetch('/api/tools/' + libTool.id, {
+                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(Object.assign({}, libTool, { toolNumber: slot }))
+                });
+                if (!res.ok) {
+                  failures++;
+                  if (!firstError) firstError = await res.text().catch(function() { return res.statusText; });
+                }
+              } catch (err) {
+                failures++;
+                if (!firstError) firstError = err && err.message ? err.message : String(err);
+              }
+            }
+
+            if (ranOutOfSlots) {
+              alert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually.');
+            }
+          } finally {
+            autoAssignBtn.textContent = 'Auto-Assign Slots';
+            await refreshFromServer();
+            if (failures > 0) {
+              alert(failures + ' slot assignment(s) failed.' + (firstError ? '\\n\\nFirst error: ' + firstError : ' Check the ncSender log for details.'));
+            }
+          }
+        });
 
         document.getElementById('addNewBtn').addEventListener('click', async function() {
           const addBtn = document.getElementById('addNewBtn');
