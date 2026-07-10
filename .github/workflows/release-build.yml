@@ -1,0 +1,82 @@
+name: Build and Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read plugin id and version from manifest.json
+        id: manifest
+        run: |
+          PLUGIN_ID=$(jq -r '.id' manifest.json)
+          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          echo "Plugin ID: $PLUGIN_ID"
+          echo "manifest.json version: $MANIFEST_VERSION"
+          echo "Tag version: $TAG_VERSION"
+
+          if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match manifest.json version ${MANIFEST_VERSION}. Update manifest.json before tagging."
+            exit 1
+          fi
+
+          echo "plugin_id=$PLUGIN_ID" >> "$GITHUB_OUTPUT"
+          echo "version=$MANIFEST_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Stage plugin files
+        run: |
+          PLUGIN_ID="${{ steps.manifest.outputs.plugin_id }}"
+          mkdir -p "tmp/$PLUGIN_ID"
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.scripts' \
+            --exclude 'dist' \
+            --exclude 'tmp' \
+            --exclude '.gitignore' \
+            --exclude 'latest_release.md' \
+            ./ "tmp/$PLUGIN_ID/"
+
+      - name: Build release zip
+        id: zip
+        run: |
+          PLUGIN_ID="${{ steps.manifest.outputs.plugin_id }}"
+          VERSION="${{ steps.manifest.outputs.version }}"
+          mkdir -p dist
+          ZIP_NAME="${PLUGIN_ID}-v${VERSION}.zip"
+          (cd tmp && zip -r "../dist/${ZIP_NAME}" "${PLUGIN_ID}")
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "zip_path=dist/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Get release notes
+        id: notes
+        run: |
+          if [ -f latest_release.md ]; then
+            {
+              echo 'body<<RELEASE_NOTES_EOF'
+              cat latest_release.md
+              echo 'RELEASE_NOTES_EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "body=Release ${{ steps.manifest.outputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ steps.manifest.outputs.plugin_id }} v${{ steps.manifest.outputs.version }}
+          body: ${{ steps.notes.outputs.body }}
+          files: ${{ steps.zip.outputs.zip_path }}
+          fail_on_unmatched_files: true
