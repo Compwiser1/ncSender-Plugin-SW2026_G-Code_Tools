@@ -478,26 +478,45 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         }
 
         function renderCarousel() {
-          // Locked visual constants from the approved design.
-          const PITCH = 80;
-          const FIRST_CY = 54;
-          const BULGE_R = 52;
-          const BEZEL_R = 41;
-          const INNER_R = 35;
-          const CAP_GAP = 42;   // gap between last bulge center and cap top (allows slight overlap)
-          const CAP_H = 53;
-          const CAP_W = 88;
-          const BOTTOM_PAD = 3;
-          const SVG_W = 150;
+          // Locked visual proportions from the approved design, all scaled
+          // by SCALE. The original design (SCALE=1) rendered ~712px tall
+          // for 8 slots, which turned out to be far too tall for ncSender's
+          // actual dialog viewport - it pushed the action buttons off
+          // screen and forced the whole dialog to scroll as one unit.
+          // Adjust SCALE alone to resize everything proportionally.
+          const SCALE = 0.65;
+          const PITCH = Math.round(80 * SCALE);
+          const FIRST_CY = Math.round(54 * SCALE);
+          const BULGE_R = Math.round(52 * SCALE);
+          const BEZEL_R = Math.round(41 * SCALE);
+          const INNER_R = Math.round(35 * SCALE);
+          const CAP_GAP = Math.round(42 * SCALE);
+          const CAP_H = Math.round(53 * SCALE);
+          const CAP_W = Math.round(88 * SCALE);
+          const BOTTOM_PAD = Math.max(2, Math.round(3 * SCALE));
+          const SVG_W = Math.round(150 * SCALE);
+          const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
+          const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
+          const DASH_FS = Math.max(10, Math.round(18 * SCALE));
+          const DIGIT_FS = Math.max(11, Math.round(20 * SCALE));
+          const TLS_FS = Math.max(9, Math.round(15 * SCALE));
+          const KNOB_R = Math.max(8, Math.round(17 * SCALE));
+          const LABEL_DY = Math.round(-5 * SCALE);
+          const NUMBER_DY = Math.round(19 * SCALE);
+          const DASH_DY = Math.round(8 * SCALE);
+          const DIGIT_DY = Math.round(8 * SCALE);
+          const KNOB_DY = Math.round(29 * SCALE);
+          const TLS_DY = Math.round(33 * SCALE);
+          const DIGIT_X = Math.round(24 * SCALE);
 
           const n = Math.max(magazineSize, 1);
           const lastCy = FIRST_CY + (n - 1) * PITCH;
           const capTop = lastCy + CAP_GAP;
           const capBottom = capTop + CAP_H;
           const svgH = capBottom + BOTTOM_PAD;
-          const knobCy = capTop + 29;
-          const tlsY = capTop + 33;
-          const cx = 98;
+          const knobCy = capTop + KNOB_DY;
+          const tlsY = capTop + TLS_DY;
+          const cx = Math.round(98 * SCALE);
 
           // Only tools that are actually in the library and confirmed
           // in-sync or flagged conflict occupy a physical slot visually -
@@ -529,25 +548,25 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
             if (occ && occ.action === 'match') {
               inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#22c55e"/>' +
-                '<text x="' + cx + '" y="' + (cy - 5) + '" text-anchor="middle" font-size="13" fill="#0a2c14">Tool #</text>' +
-                '<text x="' + cx + '" y="' + (cy + 19) + '" text-anchor="middle" font-weight="700" font-size="24" fill="#0a2c14">' + occ.toolNumber + '</text>';
+                '<text x="' + cx + '" y="' + (cy + LABEL_DY) + '" text-anchor="middle" font-size="' + LABEL_FS + '" fill="#0a2c14">Tool #</text>' +
+                '<text x="' + cx + '" y="' + (cy + NUMBER_DY) + '" text-anchor="middle" font-weight="700" font-size="' + NUMBER_FS + '" fill="#0a2c14">' + occ.toolNumber + '</text>';
               digitColor = '#22c55e';
             } else if (occ && occ.action === 'conflict') {
               inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#f2a623"/>' +
-                '<text x="' + cx + '" y="' + (cy - 5) + '" text-anchor="middle" font-size="13" fill="#3d2500">Tool #</text>' +
-                '<text x="' + cx + '" y="' + (cy + 19) + '" text-anchor="middle" font-weight="700" font-size="24" fill="#3d2500">' + occ.toolNumber + '</text>';
+                '<text x="' + cx + '" y="' + (cy + LABEL_DY) + '" text-anchor="middle" font-size="' + LABEL_FS + '" fill="#3d2500">Tool #</text>' +
+                '<text x="' + cx + '" y="' + (cy + NUMBER_DY) + '" text-anchor="middle" font-weight="700" font-size="' + NUMBER_FS + '" fill="#3d2500">' + occ.toolNumber + '</text>';
               digitColor = '#f2a623';
             } else {
               inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#0e1113"/>' +
-                '<text x="' + cx + '" y="' + (cy + 8) + '" text-anchor="middle" font-size="18" fill="#5a5f66">&#8212;</text>';
+                '<text x="' + cx + '" y="' + (cy + DASH_DY) + '" text-anchor="middle" font-size="' + DASH_FS + '" fill="#5a5f66">&#8212;</text>';
             }
 
-            digits += '<text x="24" y="' + (cy + 8) + '" text-anchor="middle" font-weight="700" font-size="20" fill="' + digitColor + '">' + i + '</text>';
+            digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '">' + i + '</text>';
           }
 
-          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="10" fill="url(#swCaseGrad)"/>' +
-            '<circle cx="' + cx + '" cy="' + knobCy + '" r="17" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
-            '<text x="24" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="15" fill="#e8e8e6">TLS</text>';
+          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="url(#swCaseGrad)"/>' +
+            '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
+            '<text x="' + DIGIT_X + '" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
           carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
             defs + bulges + bezels + cap + inner + digits + '</svg>';
@@ -597,7 +616,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            return '<tr><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
+            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
           }).join('');
         }
 

@@ -1,3 +1,8 @@
+## v1.6.1
+
+- **Fix: table rows had no explicit height in the real plugin.** The mockups I used to design v1.6.0 had row heights baked in, but that detail didn't make it into the actual `renderTable()` code — rows were rendering at nearly zero height, making the table look broken with real data. Rows are now a fixed 64px tall.
+- **Fix: the magazine graphic was too tall for ncSender's actual dialog window**, pushing the action buttons off-screen and forcing the whole dialog to scroll as one unit instead of just the table. Scaled the entire graphic down 35% (from ~712px to ~462px for an 8-slot magazine). All the graphic's proportions (pitch, circle sizes, fonts, cap) now derive from a single `SCALE` constant in `renderCarousel()`, so further size tuning is a one-line change instead of a full rewrite.
+
 ## v1.6.0
 
 - **Redesigned the slot graphic to match a real RapidChange ATC magazine strip.** Scalloped casing (overlapping-circle technique, calibrated against an actual reference photo), gray bezel rings, slot numbers 1-N labeled down the left side, and a "TLS" base mount with mounting knob at the bottom — all generated dynamically from your actual magazine size, not hardcoded to 8.
