@@ -236,7 +236,7 @@ function buildComparisonRows(gcodeTools, toolLibrary) {
     if (typeMatch && diaMatch && descMatch) {
       return Object.assign({}, gt, {
         action: 'match',
-        statusClass: 'gray',
+        statusClass: 'green',
         statusLabel: 'In Sync',
         libId: libTool.id,
         libType: libType,
@@ -321,8 +321,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
       }
       .sw-top {
-        display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px;
-        align-items: stretch; margin-bottom: 10px;
+        display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
       }
       .sw-message {
         background: var(--color-surface-muted, #1a1a1a);
@@ -356,7 +355,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .tools-table-container {
         border: 1px solid var(--color-border, #444); border-radius: 8px; margin-bottom: 10px;
       }
-      .tools-table { width: 100%; border-collapse: collapse; }
+      .tools-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
       .tools-table thead { background: var(--color-surface-muted, #1a1a1a); }
       .tools-table th { padding: 5px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #444); font-size: 0.75rem; }
       .tools-table td { padding: 4px 10px; border-bottom: 1px solid var(--color-border, #333); vertical-align: middle; font-size: 0.82rem; }
@@ -421,6 +420,12 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
       <div class="tools-table-container">
         <table class="tools-table">
+          <colgroup>
+            <col style="width: 6%;">
+            <col style="width: 54%;">
+            <col style="width: 28%;">
+            <col style="width: 12%;">
+          </colgroup>
           <thead>
             <tr>
               <th>Tool #</th>
@@ -509,11 +514,22 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           carousel.innerHTML = html;
         }
 
+        function titleCase(s) {
+          return String(s || '').toLowerCase().replace(/(^|[\s-])([a-z])/g, function(m, sep, ch) {
+            return sep + ch.toUpperCase();
+          });
+        }
+
         function renderTable() {
           const tbody = document.getElementById('toolsTableBody');
           tbody.innerHTML = rows.map(function(r, idx) {
-            const gcodeCell = '<strong>' + escapeHtml(r.mappedType) + '</strong> <span style="opacity:0.6">(' + escapeHtml(r.type) + ')</span> — ' +
-              r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description);
+            const mappedTitled = titleCase(r.mappedType);
+            const rawTitled = titleCase(r.type);
+            const combinedType = (mappedTitled.toLowerCase() === rawTitled.toLowerCase())
+              ? mappedTitled
+              : mappedTitled + ' ' + rawTitled;
+            const gcodeCell = '<strong>' + escapeHtml(combinedType) + '</strong> ' +
+              '<em>— ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</em>';
 
             let syncCell = '<span class="row-status-badge row-status-badge--' + r.statusClass + '">' +
               escapeHtml(r.statusLabel) + '</span>';
@@ -681,7 +697,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               const descMatch = libDescription.toUpperCase() === row.description.toUpperCase();
 
               if (typeMatch && diaMatch && descMatch) {
-                row.action = 'match'; row.statusClass = 'gray'; row.statusLabel = 'In Sync';
+                row.action = 'match'; row.statusClass = 'green'; row.statusLabel = 'In Sync';
               } else {
                 row.action = 'conflict'; row.statusClass = 'red'; row.statusLabel = 'Conflict';
               }

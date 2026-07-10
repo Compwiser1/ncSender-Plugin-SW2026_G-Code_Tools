@@ -1,3 +1,10 @@
+## v1.5.0
+
+- Moved the slot carousel below the status message instead of side-by-side — the two-column layout from v1.4.0 made the carousel too cramped.
+- G-Code Data column now shows one clean combined label instead of "flat (ENDMILL)" — e.g. "**Flat Endmill**" or "**Drill Center Drill**" — bold, with diameter and description in italics below it. Deduplicates when the mapped type and G-code type are the same word (e.g. "Drill" instead of "Drill Drill").
+- "In Sync" status badge is now green instead of gray, matching "New."
+- Narrowed the Tool # and Slot columns to just fit their content, giving that space back to the G-Code Data column.
+
 ## v1.4.0
 
 - **Conflicts no longer require a choice.** Removed the "Use G-code" / "Keep Library" buttons — conflicts always resolve to the G-code's values automatically when "Add Tools & Auto-Assign Slots" runs. The table still shows the library-vs-G-code diff for transparency before that happens; there's just nothing to click anymore.
