@@ -1,5 +1,11 @@
 name: Build and Release Plugin
 
+# Triggers on any tag push matching v*.*.* (e.g. v1.0.0). Typical flow is:
+#   1. Bump manifest.json "version" (see .scripts/bump-release.sh)
+#   2. Commit as: chore: create new release vX.X.X
+#   3. Tag the commit: git tag vX.X.X
+#   4. Push both: git push && git push --tags
+# The push of the tag is what triggers this workflow.
 on:
   push:
     tags:
@@ -80,3 +86,15 @@ jobs:
           body: ${{ steps.notes.outputs.body }}
           files: ${{ steps.zip.outputs.zip_path }}
           fail_on_unmatched_files: true
+
+      # Optional: post a notification when a release goes out. Only runs if
+      # a DISCORD_WEBHOOK_URL secret is configured on the repo — harmless
+      # no-op otherwise. Remove this step if you don't want it.
+      - name: Notify Discord (optional)
+        if: ${{ env.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -s -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚀 **${{ steps.manifest.outputs.plugin_id }} v${{ steps.manifest.outputs.version }}** released: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}\"}" \
+            "$DISCORD_WEBHOOK_URL"

@@ -1,4 +1,30 @@
 #!/usr/bin/env bash
+#
+# .scripts/bump-release.sh
+#
+# Local helper for cutting a new release of this plugin. It does NOT talk to
+# GitHub Actions directly — it just prepares and pushes the commit + tag that
+# the release-build.yml workflow is waiting for. Run this locally where you
+# have push access to the repo.
+#
+# Usage:
+#   .scripts/bump-release.sh patch   # 1.0.0 -> 1.0.1 (default)
+#   .scripts/bump-release.sh minor   # 1.0.0 -> 1.1.0
+#   .scripts/bump-release.sh major   # 1.0.0 -> 2.0.0
+#   .scripts/bump-release.sh 1.4.2   # set an explicit version
+#
+# What it does:
+#   1. Reads the current version from manifest.json
+#   2. Computes the new version (bump type or explicit version)
+#   3. Updates manifest.json in place
+#   4. Opens $EDITOR on latest_release.md so you can write release notes
+#      (this file's contents become the GitHub Release body)
+#   5. Commits as: chore: create new release vX.X.X
+#   6. Tags the commit: vX.X.X
+#   7. Pushes the commit and the tag, which triggers release-build.yml
+#
+# Requires: git, jq
+
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -48,10 +74,12 @@ if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
   exit 0
 fi
 
+# Update manifest.json version field in place
 TMP_MANIFEST=$(mktemp)
 jq --arg v "$NEW_VERSION" '.version = $v' manifest.json > "$TMP_MANIFEST"
 mv "$TMP_MANIFEST" manifest.json
 
+# Seed / open release notes for editing
 if [ ! -f latest_release.md ]; then
   echo "## v${NEW_VERSION}" > latest_release.md
   echo "" >> latest_release.md

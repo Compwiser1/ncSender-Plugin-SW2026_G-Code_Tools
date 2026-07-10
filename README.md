@@ -1,16 +1,19 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
-An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post processor**. This is a new all-in-one plugin that **replaces Dynamic Tool Slot Mapper** — only one of the two should be enabled at a time.
+An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post processor**. This plugin **replaces Dynamic Tool Slot Mapper** — only one of the two should be enabled at a time.
 
 ---
 
-## 🎯 v1.0.0: Tool Library Sync
+## 🎯 What it does
 
-SolidWorks 2026 / FrankenOKO writes a tool summary table at the bottom of every G-code file:
+On G-code load, this plugin walks a single unified dialog through three steps:
+
+### 1. Tool Library Sync
+Parses the tool summary table SolidWorks 2026 / FrankenOKO writes at the bottom of every file:
 
 ```
 (  TOOL#     TOOL TYPE     DIAMETER   DESCRIPTION                     )
@@ -19,44 +22,56 @@ SolidWorks 2026 / FrankenOKO writes a tool summary table at the bottom of every 
 (   021     CENTER DRILL    008.00    8MM X 90DEG CRB SPOT DRILL  )
 ```
 
-When a G-code file is loaded, this plugin parses that table and reconciles it against your ncSender Tool Library:
+Reconciles it against the ncSender Tool Library:
+- **🟢 New** — not in the library yet. Add all new tools in one click.
+- **🔴 Conflict** — in the library but type/diameter/description differ from the G-code. Flagged for manual resolution (**Use G-code** or **Keep Library**) — nothing is ever overwritten automatically.
+- **⚪ In Sync** — already matches.
 
-- **🟢 New** — tool isn't in the library yet. Add all new tools in one click via **"Add New Tools to Library"**.
-- **🔴 Conflict** — tool exists in the library but its type, diameter, or description doesn't match what's in the G-code. Flagged for manual resolution — each conflict shows the library value and the G-code value side by side, with **"Use G-code"** / **"Keep Library"** buttons. Nothing is ever overwritten automatically.
-- **⚪ In Sync** — tool already matches. If every tool in the file is already in sync, the dialog doesn't open at all.
+SolidWorks' tool-type vocabulary (`ENDMILL`, `CENTER DRILL`, `COUNTERSINK`, etc.) is automatically translated to ncSender's tool type enum (`flat`, `ball`, `v-bit`, `drill`, `chamfer`, `surfacing`, `probe`, `thread-mill`) before every add or update, since ncSender only accepts that fixed set.
 
-This plugin **never rewrites the G-code file itself** — `onGcodeProgramLoad` always returns the original content unchanged. It only keeps the Tool Library accurate.
+### 2. Slot Mapping
+Once a tool is in the library, click its **Slot** badge to open a picker and assign it to a physical ATC magazine slot. A visual carousel shows the whole magazine layout. If the target slot is already occupied by a different tool, the plugin automatically performs a 3-step swap so both tools end up correctly placed.
+
+### 3. G-code Translation
+Once every tool is in the library, has no conflicts, and has a slot assigned, **"Map Tools & Load"** becomes enabled. Clicking it rewrites every `T##`/`H##` reference in the file to the assigned slot number (e.g. `T18 M06` → `T3 M06`, with the original tool number preserved in a comment) and reloads the translated file — so the ATC actually moves to the correct physical position.
+
+**"Bypass"** skips all of this and loads the file exactly as-is.
+
+---
+
+## ⚠️ Behavior note
+
+Unlike pure library maintenance, this dialog opens **every time** a file has tool changes — even if the library is already fully in sync — because slot translation has to run on every load for the ATC to work correctly. (v1.0.x used to skip the dialog when nothing needed updating; that's no longer possible once slot mapping is involved.)
 
 ---
 
 ## 📖 How to Use
 
-1. Load any SolidWorks 2026 / FrankenOKO G-code file with a tool summary table
-2. If every tool already matches the library, nothing happens — the file loads normally
-3. Otherwise, the **Tool Library Sync** dialog opens automatically:
-   - New tools are listed with a green **New** badge
-   - Conflicting tools are listed with a red **Conflict** badge and a diff (library value vs. G-code value)
-4. Click **Add New Tools to Library** to add all new tools at once
-5. For each conflict, click **Use G-code** to update the library with the G-code's values, or **Keep Library** to leave the library as-is and dismiss the flag
-6. Click **Close** when done
+1. Load a SolidWorks 2026 / FrankenOKO G-code file with a tool summary table.
+2. The dialog opens automatically, showing every tool's sync status and slot assignment.
+3. Click **Add New Tools to Library** for any tools marked New.
+4. Resolve any tools marked Conflict (Use G-code / Keep Library).
+5. Click any tool's **Slot** badge to assign it to a magazine slot. If the slot is occupied, you'll see "Swap with #XX" — selecting it swaps both tools automatically.
+6. Once the banner turns green and **Map Tools & Load** is enabled, click it to translate the G-code and load the mapped version.
+7. Or click **Bypass** at any point to skip mapping and load the file unmapped.
 
 ---
 
 ## 🔧 Technical Details
 
 ### Parsing
-- Reads only the footer tool summary table (`TOOL# / TOOL TYPE / DIAMETER / DESCRIPTION`), not the inline `T## M06` tool-change calls — the footer table is a clean, structured source that's far less error-prone to parse.
-- Tool number, type, diameter (mm), and description are extracted per row.
+Reads only the footer tool summary table, not the inline `T## M06` calls — the footer table is a clean, structured source that's far less error-prone to parse.
 
-### Comparison
-- Type and description are compared case-insensitively.
-- Diameter is compared with a small floating-point tolerance (0.005 mm).
-- A tool with no library entry at all → **New**. A tool with a library entry that differs in any field → **Conflict**. Otherwise → **In Sync**.
+### Tool type mapping
+`ENDMILL` → `flat` (or `ball` if "BALL"/"BULLNOSE" appears in the type or description); `DRILL`/`CENTER DRILL` → `drill`; `COUNTERSINK` → `chamfer`. Unrecognized types fall back to `flat` and log a warning.
 
-### Library Updates
-- **Add**: `POST /api/tools` with `{ toolId, type, diameter, name, toolNumber: null }` — new tools are added without a magazine slot assignment.
-- **Resolve conflict (Use G-code)**: `PUT /api/tools/{id}`, spread over the tool's existing record so unrelated fields (like an assigned magazine slot) are preserved.
-- **Resolve conflict (Keep Library)**: no API call — just clears the flag in the dialog for this session.
+### Library updates
+- **Add**: `POST /api/tools` with `{ toolId, type, diameter, name, toolNumber: null }`.
+- **Conflict resolution (Use G-code)**: `PUT /api/tools/{id}`, spread over the existing record so unrelated fields are preserved.
+- **Slot assignment**: `PUT /api/tools/{id}` updating `toolNumber` (the magazine slot field). A 3-step swap (clear occupant → assign target → restore occupant to the vacated slot) prevents conflicts when two tools want the same slot.
+
+### G-code translation
+Runs in the browser (not the Jint plugin sandbox) to avoid its 50 MB memory cap on large files. Prepends a marker comment so the reload triggered by uploading the translated file doesn't re-fire this plugin in a loop. Retries the upload with backoff to handle a Windows file-lock race between the original file write and this plugin's write.
 
 ### Compatibility
 - **ncSender (OSS)**: 2.0.37 or higher
@@ -67,7 +82,6 @@ This plugin **never rewrites the G-code file itself** — `onGcodeProgramLoad` a
 
 ## 🚧 Planned
 
-Future versions of SW2026 G-Code Tools are expected to add:
 - Tool Wear Compensation
 - Additional SolidWorks 2026 / FrankenOKO post-processor-aware tooling
 
@@ -76,3 +90,4 @@ Future versions of SW2026 G-Code Tools are expected to add:
 ## 📄 License
 
 This plugin is provided as-is for use with ncSender.
+
