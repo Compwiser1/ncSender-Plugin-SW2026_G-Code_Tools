@@ -1495,6 +1495,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // but that's too loose for a genuine collision check.
         const TWC_COLLISION_EPS = 0.05;
 
+        function twcSignedFixed(value) {
+          const fixed = value.toFixed(2);
+          return value >= 0 ? '+' + fixed : fixed;
+        }
+
         function twcDist(ax, ay, bx, by) {
           return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
         }
@@ -2008,7 +2013,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const xyValue = offset.xy;
             if (!xyValue) return;
 
-            const noteText = 'TWC: ' + xyValue.toFixed(2);
+            const noteText = 'TWC: ' + twcSignedFixed(xyValue);
 
             if (!op.twcDirection) {
               warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): has an X & Y Offset entered but its Notes don\\'t say "internal" or "external" - nothing was changed for this operation.');
@@ -2168,8 +2173,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const isComment = /^\\s*\\(/.test(line);
 
             const z = zShiftLines[i];
+            let zChanged = false;
             if (z !== undefined && z !== 0 && !isComment) {
               line = line.replace(/([ZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
+                zChanged = true;
                 const num = parseFloat(numStr);
                 const shifted = Math.round((num + z) * 10000) / 10000;
                 return letter + shifted;
@@ -2201,6 +2208,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               if (lineNotes[i]) {
                 line = line + ' (' + lineNotes[i] + ')';
               }
+            }
+            if (zChanged && !isComment) {
+              line = line + ' (TWC: ' + twcSignedFixed(z) + ')';
             }
 
             outLines.push(line);

@@ -1,3 +1,11 @@
+## v1.15.5 (EXPERIMENTAL — explicit + sign on positive note values)
+
+**Positive TWC note values now show an explicit `+`** to match the negative sign already shown, e.g. `(TWC: +0.10)` instead of `(TWC: 0.10)`. Applies to both X & Y and Z Offset notes.
+
+## v1.15.4 (EXPERIMENTAL — Z-axis notes were missing)
+
+**Fixed: lines that only got a Z Offset shift (no X & Y change) never got a `(TWC: ...)` note at all** - note-appending was only ever wired into the X/Y/I/J rewrite path, so a Z-only change on a line silently went unnoted. Z-shifted lines now get their own `(TWC: 0.20)`-style note using the Z Offset value, independent of whether that same line also got an X & Y note (a line with both gets both, each reflecting its own value).
+
 ## v1.15.3 (EXPERIMENTAL — slot override instead of swap)
 
 **Selecting an occupied slot now overrides it instead of swapping.** Previously, assigning a tool to a slot that already held a different tool would perform a 3-step swap (clear occupant → assign target → move occupant into the tool's old slot). Now it's a straightforward override: the previous occupant is simply unassigned (cleared to no slot), and the tool you're reassigning takes the slot - two API calls instead of three. The slot picker's label also updated to say which tool is currently there and that it will be unassigned, instead of "Swap with #XX."

@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.15.3 (EXPERIMENTAL layout — see note below)
+**Version**: 1.15.5 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -59,7 +59,7 @@ Each distinct piece of geometry in an operation (each circle, each open or close
 - **Self-intersection** - if the requested offset would shrink a radius (or a tight corner's fillet) to zero or invert it, that piece is left untouched.
 - **Cross-feature collision** - the new geometry is checked against every *other* operation's toolpath at the *same cutting depth* (Z-depth-aware, so a shallow facing pass across the whole top surface doesn't falsely block a much deeper feature below it); if it would cross another feature cut at an overlapping depth, that piece is left untouched. This only checks toolpaths actually present in the file - it can't see fixtures, vises, stock boundaries, or unmachined design intent, so visually verifying or dry-running the result before cutting real material is still recommended, especially for the first few parts.
 
-If a non-zero value is entered on an operation whose Notes don't say "internal" or "external" at all, that operation is left untouched rather than guessed at. A value of exactly 0.00 leaves that operation completely untouched, as if the Notes field weren't there. Every G-code line that actually gets shifted (and any newly inserted corner-fillet line) gets its own trailing note, e.g. `N398 X157.0 Y37.0 I2.75 J0 (TWC: -0.10)` - lines that weren't touched (including a Z-only shift on a line with no XY change) stay clean.
+If a non-zero value is entered on an operation whose Notes don't say "internal" or "external" at all, that operation is left untouched rather than guessed at. A value of exactly 0.00 leaves that operation completely untouched, as if the Notes field weren't there. Every G-code line that actually gets shifted (and any newly inserted corner-fillet line) gets its own trailing note, e.g. `N398 X157.0 Y37.0 I2.75 J0 (TWC: -0.10)` (or `(TWC: +0.10)` for a positive value) - lines that weren't touched (including a Z-only shift on a line with no XY change) stay clean.
 
 ### 3. Bring This G-Code To Life!
 Once both sections are resolved, this rewrites `T##`/`H##` references to the assigned slot numbers (e.g. `T18 M06` → `T3 M06`, original tool number preserved in a comment) and/or shifts G-code coordinates per your wear comp values — whichever section(s) you organized rather than skipped — in one combined pass, then reloads the translated file so the ATC moves to the correct physical position. If any entered offset fails validation, nothing is written at all and every problem is reported together so you can go back and adjust.
