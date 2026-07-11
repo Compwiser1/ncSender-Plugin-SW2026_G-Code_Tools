@@ -379,11 +379,16 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .sw-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: var(--color-text-primary, #e0e0e0);
-        padding: 14px 18px 68px;
+        padding: 14px 18px;
         width: 1180px;
         max-width: 1180px;
         margin: 0 auto;
         box-sizing: border-box;
+      }
+      .sw-height-spacer {
+        display: block;
+        width: 100%;
+        height: 68px;
       }
       .sw-header {
         display: flex; align-items: center; justify-content: space-between;
@@ -662,6 +667,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       </div>
 
       <button id="lifeBtn" type="button" class="btn btn-life" disabled>&#9889; Bring This G-Code To Life!</button>
+      <div class="sw-height-spacer" aria-hidden="true"></div>
     </div>
 
     <div id="slotSelectorOverlay" class="slot-selector-overlay">
@@ -723,8 +729,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // Ready/Skipped badge text always mirrors the exact button label
         // the user clicked, so the header and the button that produced
         // that state can never drift out of sync with each other.
-        const TOOL_BADGE_LABELS = { ready: 'Organize My Tools', skipped: "I Don't Need This" };
-        const OP_BADGE_LABELS = { ready: 'Apply My Safety Net', skipped: 'Live On The Edge' };
+        const TOOL_BADGE_LABELS = { ready: 'Tools Organized', skipped: "I Didn't Need This" };
+        const OP_BADGE_LABELS = { ready: 'Safety Net Applied', skipped: 'Living On The Edge' };
 
         function applySectionBadge(badgeId, state, labelOverride) {
           const b = SECTION_BADGES[state];

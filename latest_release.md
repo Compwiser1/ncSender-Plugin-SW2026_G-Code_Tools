@@ -1,3 +1,8 @@
+## v1.13.7 (EXPERIMENTAL — badge wording + real height spacer)
+
+- **Badge wording updated per your latest preference**: Tool Manager now reads "Tools Organized" / "I Didn't Need This" (was "Organize My Tools" / "I Don't Need This"); Operation Manager now reads "Safety Net Applied" / "Living On The Edge" (was "Apply My Safety Net" / "Live On The Edge").
+- **Retried the extra dialog height fix differently**: v1.13.6's approach (extra `padding-bottom` on the container) had no visible effect, so this version replaces it with a real block-level spacer element after the "Bring This G-Code To Life!" button instead - padding alone may not be picked up by whatever method ncSender uses to measure content height, while an actual element with height is far more likely to be. Still first-draft/untested in the real app - let us know if this one doesn't show up either, since at that point the fix probably needs to happen on ncSender's sizing logic rather than ours.
+
 ## v1.13.6 (EXPERIMENTAL — badge/button alignment + height fix)
 
 - **Both section headers now always show the exact button text that was clicked**, instead of generic "Ready to go!"/"Skipped" wording: Tool Manager reads "Organize My Tools" or "I Don't Need This"; Operation Manager reads "Apply My Safety Net" or "Live On The Edge". Header and button can no longer drift out of sync with each other since the badge text is driven directly from the same label.
