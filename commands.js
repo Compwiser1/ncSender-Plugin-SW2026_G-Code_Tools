@@ -334,10 +334,20 @@ function parseOperations(content) {
         const notesMatch = lines[i + 1].match(notesPattern);
         if (notesMatch) opNotes = notesMatch[1];
       }
+      // TWC direction comes only from the words "internal"/"external"
+      // appearing in the Notes text (case-insensitive) - any numeric
+      // suffix (TWC_INTERNAL_1, TWC_External_2, ...) is ignored, since
+      // it's just a tracking label from the CAM process and has no
+      // bearing on which way the offset should push the toolpath.
+      let twcDirection = null;
+      const notesLower = opNotes.toLowerCase();
+      if (notesLower.indexOf('internal') !== -1) twcDirection = 'internal';
+      else if (notesLower.indexOf('external') !== -1) twcDirection = 'external';
       currentOp = {
         opNumber: parseInt(opMatch[1], 10),
         opName: opMatch[2],
         opNotes: opNotes,
+        twcDirection: twcDirection,
         toolNumber: currentTool,
         startLine: i + 1,
         endLine: null
@@ -1397,30 +1407,74 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           if (arrow) { e.preventDefault(); arrow.click(); }
         });
 
-        document.getElementById('applySafetyBtn').addEventListener('click', function() {
-          storedWearOffsets = {};
+        document.getElementById('applySafetyBtn').addEventListener('click', async function() {
+          const btn = this;
+          const offsets = {};
           document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
             const idx = input.getAttribute('data-op-idx');
             const axis = input.getAttribute('data-axis');
             const val = parseFloat(input.value);
-            if (!storedWearOffsets[idx]) storedWearOffsets[idx] = { xy: 0, z: 0 };
-            if (!isNaN(val)) storedWearOffsets[idx][axis] = val;
+            if (!offsets[idx]) offsets[idx] = { xy: 0, z: 0 };
+            if (!isNaN(val)) offsets[idx][axis] = val;
           });
-          setOpSectionState('ready');
+
+          btn.disabled = true;
+          btn.textContent = 'Checking\\u2026';
+          try {
+            const fileContent = await fetchOriginalContent();
+            const result = applyRadialAndZOffsets(fileContent, offsets);
+            btn.disabled = false;
+            btn.textContent = 'Apply Offset';
+            if (!result.success) {
+              alert('Could not apply the entered offset(s):\\n\\n' + result.errors.join('\\n\\n'));
+              return;
+            }
+            storedWearOffsets = offsets;
+            setOpSectionState('ready');
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Apply Offset';
+            alert('Failed to validate the offset(s): ' + (err && err.message ? err.message : err));
+          }
         });
 
         document.getElementById('livingEdgeBtn').addEventListener('click', function() {
           setOpSectionState('skipped');
         });
 
-        function wcShiftLine(line, xyOffset, zOffset) {
-          return line.replace(/([XYZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
-            const num = parseFloat(numStr);
-            const delta = (letter === 'X' || letter === 'Y') ? xyOffset : zOffset;
-            const shifted = Math.round((num + delta) * 10000) / 10000;
-            return letter + shifted;
-          });
-        }
+        // === TWC (Tool Wear Compensation) internal/external offset engine ===
+        //
+        // STAGE 1 (circles only): an operation's Notes field determines
+        // direction - "internal" (bore, more removal = bigger hole) or
+        // "external" (boss, more removal = smaller boss). A negative
+        // X & Y Offset value always means "remove more material" and a
+        // positive value always means "keep more material", regardless
+        // of internal/external - achieved by applying the offset with
+        // an opposite sign depending on direction:
+        //   internal: newRadius = oldRadius - value
+        //   external: newRadius = oldRadius + value
+        //
+        // Only operations whose arc geometry resolves to one or more
+        // clean, fully-closed circles are supported in this stage. Any
+        // operation tagged internal/external with a non-zero value whose
+        // geometry is NOT simple circles (e.g. a mixed line/arc outer
+        // profile) is left completely untouched and reported as
+        // unsupported - no partial/best-effort offsetting is attempted.
+        // Arbitrary-profile support (true perpendicular-to-path
+        // offsetting) is planned as a follow-up stage.
+        //
+        // Safety checks, both hard failures (operation left untouched,
+        // clear reason reported, nothing written for ANY operation until
+        // every entered offset passes):
+        //   - new radius must stay positive (self-intersection/inversion)
+        //   - the new circle must not cross any other operation's
+        //     toolpath anywhere else in the file
+        //
+        // The whole file's G-code is parsed ONCE into a flat list of
+        // resolved (modal-carryover-aware) moves before any of this
+        // runs, since post-processor output isn't guaranteed to restate
+        // X/Y on every line (confirmed only after real testing - see the
+        // corner-arc bug this caught during development).
 
         function wcHasGWord(line, word) {
           const tokens = line.toUpperCase().split(' ');
@@ -1430,32 +1484,412 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return false;
         }
 
-        function applyWearCompensation(fileContent, opOffsets) {
-          const lines = fileContent.split(/\\r?\\n/);
-          const lineOffset = new Array(lines.length).fill(null);
+        // 0.15mm - the post processor rounds X/Y to 1 decimal place but
+        // I/J to 2, so a real, correctly-defined arc's computed center
+        // and start/end-to-center radii can legitimately vary by up to
+        // ~0.07mm from that rounding alone, depending on which quadrant
+        // of the circle a given arc move is derived from (confirmed
+        // against Test_16's real Bearing Bore arcs - computed centers
+        // ranged from (157.05, 39.70) to (157.00, 39.75) for what is
+        // provably the same physical circle). Genuinely different radii
+        // or centers in a non-circular profile differ by whole
+        // millimeters, so this tolerance doesn't risk misclassifying
+        // real mixed geometry, and real distinct features on a
+        // machined part are never this close together.
+        const TWC_EPS = 0.15;
 
-          wearCompOperations.forEach(function(op, idx) {
-            const offset = opOffsets[idx];
-            if (!offset || (offset.xy === 0 && offset.z === 0)) return;
-            for (let i = op.startLine; i <= op.endLine && i < lines.length; i++) {
-              lineOffset[i] = offset;
+        function twcDist(ax, ay, bx, by) {
+          return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
+        }
+
+        function twcTokenNumber(tokens, letter) {
+          for (let k = 0; k < tokens.length; k++) {
+            const t = tokens[k];
+            if (t.length > 1 && t.charAt(0).toUpperCase() === letter) {
+              const v = parseFloat(t.substring(1));
+              if (!isNaN(v)) return v;
             }
-          });
+          }
+          return null;
+        }
 
+        function twcTokenMotion(tokens) {
+          for (let k = 0; k < tokens.length; k++) {
+            const m = tokens[k].match(/^G0?([0-3])$/i);
+            if (m) return parseInt(m[1], 10);
+          }
+          return null;
+        }
+
+        // Parses the whole file into one resolved-position record per
+        // line that touches X/Y/Z/I/J - modal carryover aware, so a line
+        // that only restates X still resolves a correct Y from whatever
+        // was last commanded. G91 (incremental) lines update the mode
+        // flag only; their coordinates are never trusted or touched,
+        // matching the same rule the existing Z-offset transform follows.
+        function parseFileMoves(fileContent) {
+          const lines = fileContent.split(/\\r?\\n/);
+          let curX = 0, curY = 0, curZ = 0;
           let absoluteMode = true;
-          const result = lines.map(function(line, i) {
+          let motion = null;
+          const moves = [];
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^\\s*\\(/.test(line)) continue;
+            const tokens = line.trim().split(/\\s+/).filter(Boolean);
+            if (tokens.length === 0) continue;
+
             if (wcHasGWord(line, 'G91')) absoluteMode = false;
             if (wcHasGWord(line, 'G90')) absoluteMode = true;
 
-            const offset = lineOffset[i];
-            if (!offset) return line;
-            if (!absoluteMode) return line;
-            if (/^\\s*\\(/.test(line)) return line;
+            const mv = twcTokenMotion(tokens);
+            if (mv !== null) motion = mv;
 
-            return wcShiftLine(line, offset.xy, offset.z);
+            const xVal = twcTokenNumber(tokens, 'X');
+            const yVal = twcTokenNumber(tokens, 'Y');
+            const zVal = twcTokenNumber(tokens, 'Z');
+            const iVal = twcTokenNumber(tokens, 'I');
+            const jVal = twcTokenNumber(tokens, 'J');
+
+            const startX = curX, startY = curY, startZ = curZ;
+
+            if (absoluteMode) {
+              if (xVal !== null) curX = xVal;
+              if (yVal !== null) curY = yVal;
+              if (zVal !== null) curZ = zVal;
+            }
+
+            const hasAny = (xVal !== null || yVal !== null || zVal !== null || iVal !== null || jVal !== null);
+            if (!hasAny) continue;
+
+            moves.push({
+              lineIndex: i,
+              absoluteMode: absoluteMode,
+              motion: motion,
+              startX: startX, startY: startY, startZ: startZ,
+              x: curX, y: curY, z: curZ,
+              hasX: xVal !== null, hasY: yVal !== null,
+              iVal: iVal, jVal: jVal,
+              isArc: (motion === 2 || motion === 3) && (iVal !== null || jVal !== null)
+            });
+          }
+
+          return moves;
+        }
+
+        // Classifies one operation's arc geometry as one or more clean,
+        // fully-closed circles - or reports it as unsupported. A single
+        // operation can legitimately contain several distinct circles
+        // (two separate holes, or a stepped counterbore with two
+        // diameters at the same center) - each is treated independently
+        // and offset by the same signed delta, since a worn tool removes
+        // roughly the same physical amount regardless of which diameter
+        // it's cutting.
+        function classifyOperationCircles(moves, op) {
+          const arcMoves = moves.filter(function(m) {
+            return m.lineIndex >= op.startLine && m.lineIndex <= op.endLine && m.isArc && m.absoluteMode;
           });
 
-          return result.join('\\r\\n');
+          if (arcMoves.length === 0) {
+            return { ok: false, reason: 'no arc geometry found in this operation' };
+          }
+
+          const groups = [];
+          for (let k = 0; k < arcMoves.length; k++) {
+            const m = arcMoves[k];
+            const cx = m.startX + m.iVal;
+            const cy = m.startY + m.jVal;
+            const r1 = twcDist(cx, cy, m.startX, m.startY);
+            const r2 = twcDist(cx, cy, m.x, m.y);
+            if (Math.abs(r1 - r2) > TWC_EPS) {
+              return { ok: false, reason: 'line ' + (m.lineIndex + 1) + ' is not a valid arc (start/end radius mismatch) - likely part of a non-circular profile' };
+            }
+            // Real-distance clustering, not string-bucket matching -
+            // rounding-induced noise can otherwise split one true circle
+            // into two adjacent buckets.
+            let group = null;
+            for (let g = 0; g < groups.length; g++) {
+              if (twcDist(cx, cy, groups[g].center.x, groups[g].center.y) <= TWC_EPS &&
+                  Math.abs(r1 - groups[g].radius) <= TWC_EPS) {
+                group = groups[g];
+                break;
+              }
+            }
+            if (!group) {
+              group = { center: { x: cx, y: cy }, radius: r1, moves: [] };
+              groups.push(group);
+            }
+            group.moves.push(m);
+          }
+
+          const circles = [];
+          for (let g = 0; g < groups.length; g++) {
+            const group = groups[g];
+            const gm = group.moves.slice().sort(function(a, b) { return a.lineIndex - b.lineIndex; });
+
+            let runStart = null;
+            let runLastEnd = null;
+            const closesOk = [];
+            for (let m = 0; m < gm.length; m++) {
+              const mv = gm[m];
+              const isContiguous = (runLastEnd !== null) &&
+                Math.abs(mv.startX - runLastEnd.x) < TWC_EPS &&
+                Math.abs(mv.startY - runLastEnd.y) < TWC_EPS;
+              if (!isContiguous) {
+                if (runStart !== null) {
+                  closesOk.push(twcDist(runStart.x, runStart.y, runLastEnd.x, runLastEnd.y) < TWC_EPS);
+                }
+                runStart = { x: mv.startX, y: mv.startY };
+              }
+              runLastEnd = { x: mv.x, y: mv.y };
+            }
+            if (runStart !== null) {
+              closesOk.push(twcDist(runStart.x, runStart.y, runLastEnd.x, runLastEnd.y) < TWC_EPS);
+            }
+
+            if (closesOk.length === 0 || closesOk.indexOf(false) !== -1) {
+              return { ok: false, reason: 'arc geometry near (' + group.center.x.toFixed(2) + ', ' + group.center.y.toFixed(2) + ') does not form a fully closed circle - likely part of a non-circular profile' };
+            }
+
+            circles.push({
+              center: group.center,
+              radius: group.radius,
+              lineIndices: gm.map(function(m) { return m.lineIndex; })
+            });
+          }
+
+          return { ok: true, circles: circles };
+        }
+
+        function computeNewRadius(direction, oldRadius, value) {
+          return direction === 'internal' ? (oldRadius - value) : (oldRadius + value);
+        }
+
+        // Coarse sampled point cloud of every OTHER move in the file
+        // (absolute-mode only), used for the cross-feature collision
+        // check - arcs sampled every ~3 degrees, lines every ~1mm
+        // (capped) so both curved and straight geometry are represented
+        // closely enough for a safety check without being expensive.
+        function buildGeometrySamples(moves) {
+          const samples = [];
+          for (let k = 0; k < moves.length; k++) {
+            const m = moves[k];
+            if (!m.absoluteMode) continue;
+            if (m.isArc) {
+              const cx = m.startX + m.iVal, cy = m.startY + m.jVal;
+              const r = twcDist(cx, cy, m.startX, m.startY);
+              const a0 = Math.atan2(m.startY - cy, m.startX - cx);
+              let a1 = Math.atan2(m.y - cy, m.x - cx);
+              const cw = (m.motion === 2);
+              let sweep = a1 - a0;
+              if (cw) { while (sweep > 0) sweep -= 2 * Math.PI; if (sweep === 0) sweep = -2 * Math.PI; }
+              else { while (sweep < 0) sweep += 2 * Math.PI; if (sweep === 0) sweep = 2 * Math.PI; }
+              const steps = Math.max(4, Math.ceil(Math.abs(sweep) / (Math.PI / 60)));
+              for (let s = 0; s <= steps; s++) {
+                const a = a0 + sweep * (s / steps);
+                samples.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), lineIndex: m.lineIndex });
+              }
+            } else if (m.hasX || m.hasY) {
+              const len = twcDist(m.startX, m.startY, m.x, m.y);
+              const steps = Math.max(1, Math.min(50, Math.ceil(len / 1.0)));
+              for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                samples.push({ x: m.startX + (m.x - m.startX) * t, y: m.startY + (m.y - m.startY) * t, lineIndex: m.lineIndex });
+              }
+            }
+          }
+          return samples;
+        }
+
+        // A tighter, separate threshold for "does this actually cross
+        // other geometry" - TWC_EPS is deliberately loose to absorb the
+        // post processor's coordinate-rounding noise when matching/
+        // clustering circles, but that's too loose for a genuine
+        // collision check.
+        const TWC_COLLISION_EPS = 0.05;
+
+        function circleCollidesWithOthers(center, newRadius, samples, excludeLineIndexSet) {
+          const steps = 72;
+          for (let s = 0; s < steps; s++) {
+            const a = (s / steps) * 2 * Math.PI;
+            const px = center.x + newRadius * Math.cos(a);
+            const py = center.y + newRadius * Math.sin(a);
+            for (let k = 0; k < samples.length; k++) {
+              const sp = samples[k];
+              if (excludeLineIndexSet[sp.lineIndex]) continue;
+              if (twcDist(px, py, sp.x, sp.y) < TWC_COLLISION_EPS) return true;
+            }
+          }
+          return false;
+        }
+
+        // Main entry point: validates every operation with a non-zero
+        // entered value, and only if EVERY one passes does it return
+        // transformed content - otherwise nothing is written at all and
+        // every problem is reported together, so a partial/ambiguous
+        // result never ships.
+        function applyRadialAndZOffsets(fileContent, opOffsets) {
+          const errors = [];
+          const notes = [];
+          const rewrites = {};
+          const zShiftLines = {};
+
+          const moves = parseFileMoves(fileContent);
+          const allSamples = buildGeometrySamples(moves);
+
+          wearCompOperations.forEach(function(op, idx) {
+            const offset = opOffsets[idx];
+            if (!offset) return;
+
+            if (offset.z !== 0) {
+              for (let ln = op.startLine; ln <= op.endLine; ln++) zShiftLines[ln] = offset.z;
+            }
+
+            const xyValue = offset.xy;
+            if (!xyValue) return;
+
+            if (!op.twcDirection) {
+              errors.push('Operation #' + op.opNumber + ' (' + op.opName + '): has an X & Y Offset entered but its Notes don\\'t say "internal" or "external" - nothing was changed.');
+              return;
+            }
+
+            const classification = classifyOperationCircles(moves, op);
+            if (!classification.ok) {
+              errors.push('Operation #' + op.opNumber + ' (' + op.opName + '): ' + classification.reason + ' - arbitrary-profile offsetting isn\\'t supported yet, nothing was changed.');
+              return;
+            }
+
+            let opHadError = false;
+            let anyApplied = false;
+
+            classification.circles.forEach(function(circle) {
+              const newRadius = computeNewRadius(op.twcDirection, circle.radius, xyValue);
+              if (newRadius <= 0.01) {
+                errors.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the ' + circle.radius.toFixed(2) + 'mm-radius feature at (' + circle.center.x.toFixed(2) + ', ' + circle.center.y.toFixed(2) + ') by ' + xyValue.toFixed(2) + 'mm would eliminate or invert it - nothing was changed.');
+                opHadError = true;
+                return;
+              }
+
+              const excludeSet = {};
+              moves.forEach(function(m) {
+                if (m.lineIndex < op.startLine || m.lineIndex > op.endLine) return;
+                const dStart = twcDist(m.startX, m.startY, circle.center.x, circle.center.y);
+                const dEnd = twcDist(m.x, m.y, circle.center.x, circle.center.y);
+                if (Math.abs(dStart - circle.radius) <= TWC_EPS || Math.abs(dEnd - circle.radius) <= TWC_EPS) {
+                  excludeSet[m.lineIndex] = true;
+                }
+              });
+              if (circleCollidesWithOthers(circle.center, newRadius, allSamples, excludeSet)) {
+                errors.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the feature at (' + circle.center.x.toFixed(2) + ', ' + circle.center.y.toFixed(2) + ') to a ' + newRadius.toFixed(2) + 'mm radius would cross another operation\\'s toolpath - nothing was changed.');
+                opHadError = true;
+                return;
+              }
+
+              const factor = newRadius / circle.radius;
+              let localError = false;
+
+              moves.forEach(function(m) {
+                if (localError) return;
+                if (m.lineIndex < op.startLine || m.lineIndex > op.endLine) return;
+                if (!m.absoluteMode) return;
+
+                if (m.isArc) {
+                  const cx = m.startX + m.iVal, cy = m.startY + m.jVal;
+                  if (twcDist(cx, cy, circle.center.x, circle.center.y) > TWC_EPS) return;
+                  if (Math.abs(twcDist(cx, cy, m.startX, m.startY) - circle.radius) > TWC_EPS) return;
+                  const r = rewrites[m.lineIndex] || {};
+                  r.x = circle.center.x + (m.x - circle.center.x) * factor;
+                  r.y = circle.center.y + (m.y - circle.center.y) * factor;
+                  r.iVal = m.iVal * factor;
+                  r.jVal = m.jVal * factor;
+                  rewrites[m.lineIndex] = r;
+                } else {
+                  if (!m.hasX && !m.hasY) return;
+                  const dEnd = twcDist(m.x, m.y, circle.center.x, circle.center.y);
+                  if (Math.abs(dEnd - circle.radius) > TWC_EPS) return;
+                  const nx = circle.center.x + (m.x - circle.center.x) * factor;
+                  const ny = circle.center.y + (m.y - circle.center.y) * factor;
+                  if ((Math.abs(nx - m.x) > TWC_EPS && !m.hasX) || (Math.abs(ny - m.y) > TWC_EPS && !m.hasY)) {
+                    errors.push('Operation #' + op.opNumber + ' (' + op.opName + '): line ' + (m.lineIndex + 1) + ' needs an axis change but doesn\\'t explicitly state it on that line - unsupported pattern, nothing was changed.');
+                    opHadError = true;
+                    localError = true;
+                    return;
+                  }
+                  const r = rewrites[m.lineIndex] || {};
+                  if (m.hasX) r.x = nx;
+                  if (m.hasY) r.y = ny;
+                  rewrites[m.lineIndex] = r;
+                }
+              });
+
+              if (!localError) anyApplied = true;
+            });
+
+            if (!opHadError && anyApplied) {
+              notes.push({
+                afterLineIndex: op.startLine,
+                text: 'TWC Applied - ' + (op.twcDirection === 'internal' ? 'Internal' : 'External') + ' ' + xyValue.toFixed(2)
+              });
+            }
+          });
+
+          if (errors.length > 0) {
+            return { success: false, errors: errors };
+          }
+
+          const lines = fileContent.split(/\\r?\\n/);
+          const notesByLine = {};
+          notes.forEach(function(n) {
+            if (!notesByLine[n.afterLineIndex]) notesByLine[n.afterLineIndex] = [];
+            notesByLine[n.afterLineIndex].push(n.text);
+          });
+
+          const outLines = [];
+          for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            const isComment = /^\\s*\\(/.test(line);
+
+            const z = zShiftLines[i];
+            if (z !== undefined && z !== 0 && !isComment) {
+              line = line.replace(/([ZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
+                const num = parseFloat(numStr);
+                const shifted = Math.round((num + z) * 10000) / 10000;
+                return letter + shifted;
+              });
+            }
+
+            const rw = rewrites[i];
+            if (rw && !isComment) {
+              if (rw.x !== undefined) {
+                line = line.replace(/(^|\\s)X(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                  return pre + 'X' + (Math.round(rw.x * 10000) / 10000);
+                });
+              }
+              if (rw.y !== undefined) {
+                line = line.replace(/(^|\\s)Y(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                  return pre + 'Y' + (Math.round(rw.y * 10000) / 10000);
+                });
+              }
+              if (rw.iVal !== undefined) {
+                line = line.replace(/(^|\\s)I(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                  return pre + 'I' + (Math.round(rw.iVal * 10000) / 10000);
+                });
+              }
+              if (rw.jVal !== undefined) {
+                line = line.replace(/(^|\\s)J(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                  return pre + 'J' + (Math.round(rw.jVal * 10000) / 10000);
+                });
+              }
+            }
+
+            outLines.push(line);
+            if (notesByLine[i]) {
+              notesByLine[i].forEach(function(t) { outLines.push('( ' + t + ' )'); });
+            }
+          }
+
+          return { success: true, content: outLines.join('\\r\\n') };
         }
 
         // === Tool translation (T##/H## -> assigned slot) ===
@@ -1539,7 +1973,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             }
 
             if (opSectionState === 'ready') {
-              fileContent = applyWearCompensation(fileContent, storedWearOffsets);
+              const twcResult = applyRadialAndZOffsets(fileContent, storedWearOffsets);
+              if (!twcResult.success) {
+                alert('Could not bring this G-code to life - the offset(s) entered are no longer valid:\\n\\n' + twcResult.errors.join('\\n\\n'));
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';
+                return;
+              }
+              fileContent = twcResult.content;
             }
 
             const transformed = '${SW2026_MARKER}\\n' + fileContent;

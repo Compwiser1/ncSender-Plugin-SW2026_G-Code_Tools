@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.13.14 (EXPERIMENTAL layout — see note below)
+**Version**: 1.14.0 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -47,8 +47,20 @@ Once a tool is in the library, click its **Slot** badge to open a picker and ass
 ### 2. Operation Manager — Tool Wear Compensation
 Lists every **operation** in the file (not every tool), each with independent **Z Offset** and **X & Y Offset** values (-1.00 to 1.00). **Apply Offset** locks in whatever values you've entered; **Live On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless.
 
+**X & Y Offset now actually reshapes circular bores and bosses (v1.14.0, Stage 1).** Direction comes from the operation's `( Notes: ... )` comment - "internal" (a bore) or "external" (a boss); any numeric suffix like `TWC_Internal_3` is ignored. A **negative** value always means "remove more material" and a **positive** value always means "keep more material," regardless of internal/external:
+- **Internal (bore):** negative → hole gets bigger; positive → hole gets smaller/tighter.
+- **External (boss):** negative → boss gets smaller; positive → boss gets bigger.
+
+This stage only supports **true circular features** - a full 360° arc loop at one consistent center and radius (multiple depth passes, or multiple separate holes/bosses in one operation, are all handled). An operation tagged internal/external with a non-zero value whose geometry is **not** a clean circle (a mixed line/arc profile, like an outer part boundary) is left completely **untouched**, and reported as unsupported rather than guessed at - arbitrary-profile support is planned as a follow-up stage.
+
+Two hard safety checks run before anything is written, and either one blocks the change entirely (nothing partial ever ships):
+- **Self-intersection** - if the requested offset would shrink a radius to zero or invert it, that operation is rejected.
+- **Cross-feature collision** - the new circle is checked against every other operation's toolpath in the file; if it would cross another feature, that operation is rejected. This only checks toolpaths actually present in the file - it can't see fixtures, vises, stock boundaries, or unmachined design intent, so visually verifying or dry-running the result before cutting real material is still recommended, especially for the first few parts.
+
+If a non-zero value is entered on an operation whose Notes don't say "internal" or "external" at all, that's also rejected rather than guessed. A value of exactly 0.00 leaves that operation completely untouched, as if the Notes field weren't there. When an offset is successfully applied, a note like `( TWC Applied - Internal -0.10 )` is added once, right under that operation's `( Notes: ... )` line.
+
 ### 3. Bring This G-Code To Life!
-Once both sections are resolved, this rewrites `T##`/`H##` references to the assigned slot numbers (e.g. `T18 M06` → `T3 M06`, original tool number preserved in a comment) and/or shifts G-code coordinates per your wear comp values — whichever section(s) you organized rather than skipped — in one combined pass, then reloads the translated file so the ATC moves to the correct physical position.
+Once both sections are resolved, this rewrites `T##`/`H##` references to the assigned slot numbers (e.g. `T18 M06` → `T3 M06`, original tool number preserved in a comment) and/or shifts G-code coordinates per your wear comp values — whichever section(s) you organized rather than skipped — in one combined pass, then reloads the translated file so the ATC moves to the correct physical position. If any entered offset fails validation, nothing is written at all and every problem is reported together so you can go back and adjust.
 
 ---
 
