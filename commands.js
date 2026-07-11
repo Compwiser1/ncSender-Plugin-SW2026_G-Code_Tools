@@ -13,8 +13,8 @@
  *
  *   2. SLOT MAPPING - once every tool is in the library, lets the user
  *      assign each one to a physical ATC magazine slot via a visual
- *      carousel, with automatic 3-step swapping when a slot is already
- *      occupied by a different tool.
+ *      carousel. Selecting an already-occupied slot overrides it -
+ *      whichever tool was there is unassigned, not swapped elsewhere.
  *
  *   3. G-CODE TRANSLATION - once every tool has a slot, rewrites the
  *      file's T## and H## references to the assigned slot numbers (e.g.
@@ -997,7 +997,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const occupyingRow = rows.find(function(r) { return r.pocketNumber === i && r.toolNumber !== row.toolNumber; });
             const isActive = row.pocketNumber === i;
             let occupiedInfo = '';
-            if (occupyingRow) occupiedInfo = ' (Swap with #' + occupyingRow.toolNumber + ')';
+            if (occupyingRow) occupiedInfo = ' (Currently tool #' + occupyingRow.toolNumber + ' - will be unassigned)';
 
             html += '<div class="slot-selector-item ' + (isActive ? 'slot-selector-item--active' : '') + ' ' + (occupyingRow ? 'slot-selector-item--occupied' : '') + '" data-slot="' + i + '">' +
                       'Slot' + i + occupiedInfo +
@@ -1039,12 +1039,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(Object.assign({}, thisLibTool, { toolNumber: slotNumber }))
               });
-              if (oldSlot !== null && oldSlot !== undefined) {
-                await fetch('/api/tools/' + occupyingLibTool.id, {
-                  method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(Object.assign({}, occupyingLibTool, { toolNumber: oldSlot }))
-                });
-              }
             } else {
               const thisLibTool = toolLibrary[row.toolNumber];
               await fetch('/api/tools/' + thisLibTool.id, {

@@ -1,3 +1,7 @@
+## v1.15.3 (EXPERIMENTAL — slot override instead of swap)
+
+**Selecting an occupied slot now overrides it instead of swapping.** Previously, assigning a tool to a slot that already held a different tool would perform a 3-step swap (clear occupant → assign target → move occupant into the tool's old slot). Now it's a straightforward override: the previous occupant is simply unassigned (cleared to no slot), and the tool you're reassigning takes the slot - two API calls instead of three. The slot picker's label also updated to say which tool is currently there and that it will be unassigned, instead of "Swap with #XX."
+
 ## v1.15.2 (EXPERIMENTAL — shorter per-line notes)
 
 **Per-line notes shortened** from `(TWC Applied - Internal -0.10)` to `(TWC: -0.10)`.
