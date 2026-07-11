@@ -1,3 +1,9 @@
+## v1.15.6 (EXPERIMENTAL — better error messages + custom in-app dialog)
+
+- **Self-intersection warnings now state the max safe offset for that specific geometry** - e.g. "geometry at line 941 (radius 0.64mm) would invert - max safe offset for this geometry is about 0.62mm" instead of just "would invert." Applies to both circular features and general profile geometry.
+- **Replaced every native browser `alert()`/`confirm()` popup with a custom in-app dialog** matching the plugin's own dark theme - rounded card, warning icon, proper paragraph spacing for multi-part messages, and styled OK/Cancel buttons - instead of the plain unstyled OS popup. Covers every warning and confirmation in the plugin: slot assignment failures, Organize My Tools results, Apply Offset validation, and Bring This G-Code To Life's TWC warnings/confirmation.
+- Caught and fixed a real escaping bug during testing (a single- vs double-backslash mistake in the new modal code that would have broken the message-splitting logic) before shipping - verified the fix by extracting and syntax-checking the actual generated client-side script, then simulating full open/close cycles for both the alert and confirm variants.
+
 ## v1.15.5 (EXPERIMENTAL — explicit + sign on positive note values)
 
 **Positive TWC note values now show an explicit `+`** to match the negative sign already shown, e.g. `(TWC: +0.10)` instead of `(TWC: 0.10)`. Applies to both X & Y and Z Offset notes.

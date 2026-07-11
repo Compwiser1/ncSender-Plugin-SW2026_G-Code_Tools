@@ -585,6 +585,46 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .slot-selector-item--active:hover { background: var(--color-accent, #1abc9c); }
       .slot-selector-item--occupied { color: #f59e0b; }
       .slot-selector-item--disabled { color: var(--color-text-secondary, #666); cursor: not-allowed; }
+
+      .twc-modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 999999;
+        display: none;
+        align-items: center; justify-content: center;
+      }
+      .twc-modal-overlay.show { display: flex; }
+      .twc-modal {
+        background: var(--color-surface-muted, #1a1a1a);
+        border: 1px solid var(--color-border, #3a3f45);
+        border-radius: 10px;
+        width: 90%; max-width: 560px; max-height: 80vh;
+        display: flex; flex-direction: column;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+      }
+      .twc-modal-header {
+        display: flex; align-items: center; gap: 10px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--color-border, #3a3f45);
+        flex-shrink: 0;
+      }
+      .twc-modal-icon { font-size: 1.4rem; line-height: 1; }
+      .twc-modal-title { font-size: 1.05rem; font-weight: 700; color: var(--color-text-primary, #e0e0e0); }
+      .twc-modal-body {
+        padding: 16px 20px;
+        overflow-y: auto;
+        font-size: 0.9rem; line-height: 1.5;
+        color: var(--color-text-primary, #e0e0e0);
+      }
+      .twc-modal-body p { margin: 0 0 12px; }
+      .twc-modal-body p:last-child { margin-bottom: 0; }
+      .twc-modal-actions {
+        display: flex; justify-content: flex-end; gap: 10px;
+        padding: 14px 20px;
+        border-top: 1px solid var(--color-border, #3a3f45);
+        flex-shrink: 0;
+      }
+      .twc-modal-actions .btn { flex: 0 0 auto; padding: 9px 22px; }
     </style>
 
     <div class="sw-container">
@@ -677,6 +717,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       </div>
     </div>
 
+    <div id="twcModalOverlay" class="twc-modal-overlay">
+      <div class="twc-modal">
+        <div class="twc-modal-header">
+          <span class="twc-modal-icon" id="twcModalIcon">&#9888;&#65039;</span>
+          <span class="twc-modal-title" id="twcModalTitle">Notice</span>
+        </div>
+        <div class="twc-modal-body" id="twcModalBody"></div>
+        <div class="twc-modal-actions">
+          <button id="twcModalCancelBtn" type="button" class="btn btn-glow-red" style="display:none;">Cancel</button>
+          <button id="twcModalOkBtn" type="button" class="btn btn-glow-green">OK</button>
+        </div>
+      </div>
+    </div>
+
     <script>
 
       (function() {
@@ -695,6 +749,47 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         const popup = document.getElementById('slotSelectorPopup');
         const listContainer = document.getElementById('slotSelectorList');
         const carousel = document.getElementById('slotCarousel');
+
+        // === Custom modal (replaces native alert()/confirm(), which
+        // render as plain unstyled OS popups outside our control) ===
+
+        function twcShowModal(title, icon, message, showCancel) {
+          return new Promise(function(resolve) {
+            const modalOverlay = document.getElementById('twcModalOverlay');
+            document.getElementById('twcModalTitle').textContent = title;
+            document.getElementById('twcModalIcon').textContent = icon;
+            const body = document.getElementById('twcModalBody');
+            body.innerHTML = '';
+            String(message).split('\\n\\n').forEach(function(para) {
+              const p = document.createElement('p');
+              p.textContent = para;
+              body.appendChild(p);
+            });
+            const okBtn = document.getElementById('twcModalOkBtn');
+            const cancelBtn = document.getElementById('twcModalCancelBtn');
+            cancelBtn.style.display = showCancel ? '' : 'none';
+
+            function cleanup(result) {
+              modalOverlay.classList.remove('show');
+              okBtn.removeEventListener('click', onOk);
+              cancelBtn.removeEventListener('click', onCancel);
+              resolve(result);
+            }
+            function onOk() { cleanup(true); }
+            function onCancel() { cleanup(false); }
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+            modalOverlay.classList.add('show');
+          });
+        }
+
+        function twcAlert(message, title) {
+          return twcShowModal(title || 'Notice', '\u26A0\uFE0F', message, false);
+        }
+
+        function twcConfirm(message, title) {
+          return twcShowModal(title || 'Please Confirm', '\u26A0\uFE0F', message, true);
+        }
 
         function escapeHtml(s) {
           return String(s === null || s === undefined ? '' : s)
@@ -1050,7 +1145,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             await new Promise(function(resolve) { setTimeout(resolve, 100); });
             await refreshFromServer();
           } catch (err) {
-            alert('Failed to assign slot: ' + (err && err.message ? err.message : err));
+            await twcAlert('Failed to assign slot: ' + (err && err.message ? err.message : err));
           }
         }
 
@@ -1226,9 +1321,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               const evictionList = evictionCandidates.map(function(slot) {
                 return 'Slot ' + slot + ' (tool #' + occupiedBy[slot].toolId + ')';
               }).join(', ');
-              const proceed = confirm(
+              const proceed = await twcConfirm(
                 'Not enough empty slots for all tools in this file.\\n\\n' +
-                'To make room, these slots will be cleared (tools removed from their slot, not deleted from the library):\\n' +
+                'To make room, these slots will be cleared (tools removed from their slot, not deleted from the library):\\n\\n' +
                 evictionList +
                 '\\n\\nContinue?'
               );
@@ -1311,9 +1406,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const firstError = addResult.firstError || conflictResult.firstError || (assignResult && assignResult.firstError);
 
           if (assignResult && assignResult.ranOutOfSlots) {
-            alert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually, then click Organize My Tools again.');
+            await twcAlert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually, then click Organize My Tools again.');
           } else if (totalFailures > 0) {
-            alert(totalFailures + ' step(s) failed.' + (firstError ? '\\n\\nFirst error: ' + firstError : ' Check the ncSender log for details.'));
+            await twcAlert(totalFailures + ' step(s) failed.' + (firstError ? '\\n\\nFirst error: ' + firstError : ' Check the ncSender log for details.'));
           }
 
           if (currentStatus().allReady) {
@@ -1420,14 +1515,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             btn.disabled = false;
             btn.textContent = 'Apply Offset';
             if (result.warnings.length > 0) {
-              alert('Some of the entered offsets could not be applied and were left untouched:\\n\\n' + result.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied.');
+              await twcAlert('Some of the entered offsets could not be applied and were left untouched:\\n\\n' + result.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied.');
             }
             storedWearOffsets = offsets;
             setOpSectionState('ready');
           } catch (err) {
             btn.disabled = false;
             btn.textContent = 'Apply Offset';
-            alert('Failed to validate the offset(s): ' + (err && err.message ? err.message : err));
+            await twcAlert('Failed to validate the offset(s): ' + (err && err.message ? err.message : err));
           }
         });
 
@@ -1498,6 +1593,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         function twcSignedFixed(value) {
           const fixed = value.toFixed(2);
           return value >= 0 ? '+' + fixed : fixed;
+        }
+
+        function twcMaxSafeOffset(radius) {
+          return Math.max(0, Math.floor((radius - 0.02) * 100) / 100);
         }
 
         function twcDist(ax, ay, bx, by) {
@@ -1846,7 +1945,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const offsetEls = [];
           for (let i = 0; i < chain.length; i++) {
             const o = twcOffsetElement(chain[i], growAmount, wind);
-            if (!o) return { ok: false, reason: 'geometry at line ' + (chain[i].lineIndex + 1) + ' would invert (radius would go to zero or below)' };
+            if (!o) {
+              const r = chain[i].radius;
+              return { ok: false, reason: 'geometry at line ' + (chain[i].lineIndex + 1) + ' (radius ' + r.toFixed(2) + 'mm) would invert - max safe offset for this geometry is about ' + twcMaxSafeOffset(r).toFixed(2) + 'mm' };
+            }
             offsetEls.push(o);
           }
 
@@ -2038,7 +2140,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             circleFeatures.forEach(function(cls) {
               const newRadius = computeNewRadius(op.twcDirection, cls.radius, xyValue);
               if (newRadius <= 0.01) {
-                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the ' + cls.radius.toFixed(2) + 'mm-radius feature at (' + cls.center.x.toFixed(2) + ', ' + cls.center.y.toFixed(2) + ') by ' + xyValue.toFixed(2) + 'mm would eliminate or invert it - that feature was left untouched.');
+                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the ' + cls.radius.toFixed(2) + 'mm-radius feature at (' + cls.center.x.toFixed(2) + ', ' + cls.center.y.toFixed(2) + ') by ' + xyValue.toFixed(2) + 'mm would eliminate or invert it - max safe offset for this geometry is about ' + twcMaxSafeOffset(cls.radius).toFixed(2) + 'mm - that feature was left untouched.');
                 return;
               }
 
@@ -2306,7 +2408,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             if (opSectionState === 'ready') {
               const twcResult = applyRadialAndZOffsets(fileContent, storedWearOffsets);
               if (twcResult.warnings.length > 0) {
-                const proceed = confirm('Some geometry could not be offset and will be left unchanged:\\n\\n' + twcResult.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied. Continue?');
+                const proceed = await twcConfirm('Some geometry could not be offset and will be left unchanged:\\n\\n' + twcResult.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied. Continue?');
                 if (!proceed) {
                   btn.disabled = false;
                   btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';
@@ -2338,7 +2440,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           } catch (err) {
             btn.disabled = false;
             btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';
-            alert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
+            await twcAlert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
           }
         });
 
