@@ -212,7 +212,7 @@ function buildComparisonRows(gcodeTools, toolLibrary) {
     if (!libTool) {
       return Object.assign({}, gt, {
         action: 'add',
-        statusClass: 'green',
+        statusClass: 'orange',
         statusLabel: 'New',
         libId: null,
         libType: null,
@@ -362,23 +362,17 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         width: 4.5em; text-align: center; font-size: 1.2rem;
         background: var(--color-surface, #0e1113);
         border: 1px solid var(--color-border, #444);
-        border-radius: 5px 0 0 5px; color: var(--color-text-primary, #e0e0e0);
+        border-radius: 5px; color: var(--color-text-primary, #e0e0e0);
         padding: 0 4px; height: 32px; box-sizing: border-box;
       }
-      .wear-stepper { display: inline-flex; align-items: center; vertical-align: middle; height: 32px; }
-      .wear-arrows { display: flex; flex-direction: column; height: 32px; }
+      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 32px; }
+      .wear-arrows { display: flex; flex-direction: column; justify-content: center; }
       .wear-arrow {
-        width: 18px; height: 16px; flex: none;
-        background: var(--color-surface-muted, #1a1a1a);
-        border: 1px solid var(--color-border, #444);
-        border-left: none;
+        background: transparent; border: none; padding: 0; margin: 0;
         color: var(--color-text-secondary, #999);
-        font-size: 8px; line-height: 1; cursor: pointer; padding: 0;
-        box-sizing: border-box;
+        font-size: 0.85rem; line-height: 0.9; cursor: pointer;
       }
-      .wear-arrow-up { border-radius: 0 5px 0 0; border-bottom: none; }
-      .wear-arrow-down { border-radius: 0 0 5px 0; }
-      .wear-arrow:hover { background: var(--color-border, #333); color: var(--color-accent, #1abc9c); }
+      .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
       .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
       .wear-input::placeholder { color: var(--color-text-secondary, #666); }
       .gcode-cell { overflow: hidden; }
@@ -389,6 +383,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         font-weight: 600; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap;
       }
       .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(40,167,69,0.55); }
+      .row-status-badge--orange { background: rgba(249,115,22,0.2); color: #f97316; border-color: #f97316; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(249,115,22,0.55); }
       .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; box-shadow: 0 0 8px 1px rgba(153,153,153,0.4); }
       .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; box-shadow: 0 0 8px 1px rgba(220,53,69,0.55); }
       .status-conflict-wrap { border: 3px solid #dc3545; border-radius: 16px; box-shadow: 0 0 10px 1px rgba(220,53,69,0.55); padding: 6px 8px; margin: -4px -8px; }
@@ -412,6 +407,11 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         box-shadow: 0 0 10px 1px rgba(220,53,69,0.55);
       }
       .btn-glow-red:hover:not(:disabled) { background: #712530; }
+      .btn-badge-green {
+        background: rgba(40,167,69,0.2); color: #28a745; border: 1px solid #28a745;
+        box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
+      }
+      .btn-badge-green:hover:not(:disabled) { background: rgba(40,167,69,0.32); }
       .btn-glow-red:disabled { box-shadow: none; }
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
@@ -432,7 +432,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .slot-selector-overlay.show { display: block; }
       .slot-selector-popup {
         position: fixed; background: var(--color-surface, #2a2a2a); border: 1px solid var(--color-border, #444);
-        border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 200px; max-height: 300px;
+        border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 200px; max-height: 520px;
         display: flex; flex-direction: column; z-index: 99999;
       }
       .slot-selector-header { padding: 10px 12px; font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary, #999); border-bottom: 1px solid var(--color-border, #444); flex-shrink: 0; }
@@ -482,7 +482,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       </div>
 
       <div class="actions">
-        <button id="prepareBtn" class="btn btn-glow-green" disabled>Add &amp; Assign</button>
+        <button id="prepareBtn" class="btn btn-badge-green" disabled>Add &amp; Assign</button>
         <button id="mapBtn" class="btn btn-glow-green" disabled>Apply</button>
         <button id="bypassBtn" class="btn btn-glow-red">Bypass</button>
       </div>
@@ -552,7 +552,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const SVG_W = Math.round(150 * SCALE);
           const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
           const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
-          const NOTOOL_FS = Math.max(8, Math.round(11 * SCALE));
+          const NOTOOL_FS = Math.max(10, Math.round(14 * SCALE));
           const DIGIT_FS = Math.max(13, Math.round(26 * SCALE));
           const TLS_FS = DIGIT_FS;
           const KNOB_R = Math.max(8, Math.round(17 * SCALE));
@@ -600,7 +600,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             '</filter>' +
             '<filter id="outerOutline" x="-15%" y="-15%" width="130%" height="130%">' +
             '<feMorphology in="SourceAlpha" operator="dilate" radius="1.5" result="dilated"/>' +
-            '<feFlood flood-color="#9a9da1" flood-opacity="1" result="borderColor"/>' +
+            '<feFlood flood-color="#4a4d50" flood-opacity="1" result="borderColor"/>' +
             '<feComposite in="borderColor" in2="dilated" operator="in" result="borderShape"/>' +
             '<feComposite in="borderShape" in2="SourceAlpha" operator="out" result="borderOnly"/>' +
             '<feMerge><feMergeNode in="borderOnly"/><feMergeNode in="SourceGraphic"/></feMerge>' +
@@ -634,9 +634,9 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               digitColor = '#f2a623';
               digitFilter = ' filter="url(#glowAmber)"';
             } else {
-              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#2c2e30"/>' +
-                '<text x="' + cx + '" y="' + (cy - Math.round(6 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#5a5f66">No</text>' +
-                '<text x="' + cx + '" y="' + (cy + Math.round(8 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#5a5f66">Tool</text>';
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#8a8d91"/>' +
+                '<text x="' + cx + '" y="' + (cy - Math.round(6 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">No</text>' +
+                '<text x="' + cx + '" y="' + (cy + Math.round(8 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">Tool</text>';
             }
 
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
@@ -701,8 +701,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
             const wearCell = '<div class="wear-stepper">' +
               '<input type="text" class="wear-input" inputmode="decimal" ' +
-              'pattern="^[0-9][.][0-9]{2}$" maxlength="4" placeholder="0.00" ' +
-              'title="Format: #.## (one digit, decimal point, two digits)" ' +
+              'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" ' +
+              'title="Format: -1.00 to 1.00" ' +
               'data-tool-idx="' + idx + '">' +
               '<div class="wear-arrows">' +
               '<button type="button" class="wear-arrow wear-arrow-up" data-tool-idx="' + idx + '" data-dir="1" aria-label="Increase by 0.01">&#9650;</button>' +
@@ -826,7 +826,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               const libTool = toolLibrary[row.toolNumber];
               if (!libTool) {
                 row.action = 'add';
-                row.statusClass = 'green';
+                row.statusClass = 'orange';
                 row.statusLabel = 'New';
                 row.libId = null; row.libType = null; row.libDiameter = null; row.libDescription = null;
                 row.pocketNumber = null; row.slotStatus = 'unassigned';
@@ -864,6 +864,19 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           }
         }
 
+        // === Tool Wear Compensation: clamp to +/-1.00, color by sign ===
+
+        function updateWearInputColor(input) {
+          const val = parseFloat(input.value);
+          if (isNaN(val) || val === 0) {
+            input.style.color = 'var(--color-text-primary, #e0e0e0)';
+          } else if (val > 0) {
+            input.style.color = '#28a745';
+          } else {
+            input.style.color = '#dc3545';
+          }
+        }
+
         // === Conflict resolution + slot cell clicks ===
 
         document.getElementById('toolsTableBody').addEventListener('click', function(e) {
@@ -885,9 +898,23 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             // Round through integer cents to avoid floating point artifacts
             // (e.g. 0.1 + 0.01 = 0.10999999999999999 in raw JS math).
             let next = Math.round((base * 100) + (dir * 1)) / 100;
-            next = Math.max(0, Math.min(9.99, next));
+            next = Math.max(-1, Math.min(1, next));
             input.value = next.toFixed(2);
+            updateWearInputColor(input);
           }
+        });
+
+        document.getElementById('toolsTableBody').addEventListener('input', function(e) {
+          const input = e.target.closest('.wear-input');
+          if (!input) return;
+          // Manual typing bypasses the stepper's clamp - enforce the same
+          // +/-1.00 bound here so a typed "5.00" can't slip through, and
+          // keep the sign-based color in sync as the user types.
+          const raw = parseFloat(input.value);
+          if (!isNaN(raw) && (raw > 1 || raw < -1)) {
+            input.value = Math.max(-1, Math.min(1, raw)).toFixed(2);
+          }
+          updateWearInputColor(input);
         });
 
         overlay.addEventListener('click', closeSlotSelector);

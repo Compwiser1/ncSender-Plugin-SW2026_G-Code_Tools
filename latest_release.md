@@ -1,3 +1,13 @@
+## v1.10.0
+
+- **Slot dropdown popup enlarged** so all 8 (or however many) options are visible without scrolling.
+- **"New" status is now orange, not green** — distinguishes an unadded tool from a confirmed "In Sync" one, which stays green.
+- **Tool Wear Compensation stepper redesigned as plain minimal arrows** (no button box, no border/background) instead of two large bordered buttons — matches the slot dropdown's lightweight chevron aesthetic.
+- **Magazine outline darkened** from light gray to a darker, more subdued gray.
+- **"No Tool" circles are now light gray with black text**, sized slightly larger.
+- **"Add & Assign" restyled to match the Status badge look** (semi-transparent background, same glow) rather than the solid-color button style — worth watching closely, since this reintroduces the same style of background that caused a color-compositing issue with buttons in v1.9.1; if it looks off again in the real dialog, that's the likely cause.
+- **Tool Wear Compensation range changed to -1.00 through 1.00** (was 0.00-9.99). Values now color themselves live: green for positive, red for negative, default for zero - both via the stepper and when typed manually.
+
 ## v1.9.2
 
 - **Casing/empty-slot colors swapped** — the casing is now black, empty slot circles are gray (previously reversed).
