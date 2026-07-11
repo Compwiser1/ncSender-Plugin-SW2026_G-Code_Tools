@@ -49,37 +49,6 @@ function buildInitialConfig(raw) {
 // translated and we bail immediately.
 const SW2026_MARKER = '; ncSender-sw2026-transformed';
 
-// === EXPERIMENTAL TEST - NOT the real feature yet ===
-// Testing 3 unknowns before building the real Tool Wear Compensation
-// menu feature:
-//   1. Does pluginContext.registerToolMenu() exist in this Jint-sandbox
-//      runtime? It's documented for the *different* ES6-module plugin
-//      style (export function onLoad(ctx)), not confirmed for ours.
-//   2. Does it actually produce a working Tools-tab entry that opens
-//      a dialog when clicked?
-//   3. This whole script re-evaluates every time onGcodeProgramLoad
-//      fires - does calling this at top level (i.e. every time a file
-//      loads) create a NEW duplicate menu entry each time, or does
-//      ncSender deduplicate by label/id? Load a couple of different
-//      files and check the Tools tab for duplicates.
-try {
-  if (typeof pluginContext !== 'undefined' && pluginContext && typeof pluginContext.registerToolMenu === 'function') {
-    pluginContext.registerToolMenu('SW2026 Test Menu Item', function() {
-      pluginContext.showDialog(
-        'Test Dialog',
-        '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;"><h2>It works!</h2><p>registerToolMenu() and showDialog() both work in this runtime.</p></div>',
-        {}
-      );
-    });
-    safeLog('[SW2026 TEST] registerToolMenu call completed without throwing');
-  } else {
-    safeLog('[SW2026 TEST] pluginContext.registerToolMenu is NOT available in this runtime (typeof: ' +
-      (typeof pluginContext !== 'undefined' && pluginContext ? typeof pluginContext.registerToolMenu : 'no pluginContext') + ')');
-  }
-} catch (e) {
-  safeLog('[SW2026 TEST] registerToolMenu threw an error: ' + (e && e.message ? e.message : String(e)));
-}
-
 // === Entry point ===
 
 function onGcodeProgramLoad(content, context, settings) {
@@ -87,6 +56,31 @@ function onGcodeProgramLoad(content, context, settings) {
   // on unhandled JS exceptions. Always return original content on failure
   // (host sees a graceful fallback, user can still load the file as-is).
   try {
+    // === EXPERIMENTAL TEST - NOT the real feature yet ===
+    // The previous test placed this same probe at the top level of the
+    // file, outside any function - it never ran at all (not even the
+    // safeLog calls), which tells us this runtime doesn't execute
+    // top-level script code, only the specific named functions it looks
+    // for (onGcodeProgramLoad). Testing again from inside a function we
+    // KNOW executes, to isolate whether registerToolMenu itself exists.
+    try {
+      if (typeof pluginContext !== 'undefined' && pluginContext && typeof pluginContext.registerToolMenu === 'function') {
+        pluginContext.registerToolMenu('SW2026 Test Menu Item', function() {
+          pluginContext.showDialog(
+            'Test Dialog',
+            '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;"><h2>It works!</h2><p>registerToolMenu() and showDialog() both work in this runtime.</p></div>',
+            {}
+          );
+        });
+        safeLog('[SW2026 TEST] registerToolMenu call completed without throwing (called from inside onGcodeProgramLoad)');
+      } else {
+        safeLog('[SW2026 TEST] pluginContext.registerToolMenu is NOT available (typeof: ' +
+          (typeof pluginContext !== 'undefined' && pluginContext ? typeof pluginContext.registerToolMenu : 'no pluginContext') + ')');
+      }
+    } catch (testErr) {
+      safeLog('[SW2026 TEST] registerToolMenu threw: ' + (testErr && testErr.message ? testErr.message : String(testErr)));
+    }
+
     if (content && content.length > 0 && content.substring(0, 80).indexOf(SW2026_MARKER) !== -1) {
       return content;
     }

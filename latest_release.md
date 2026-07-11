@@ -1,3 +1,7 @@
+## v1.11.2 (EXPERIMENTAL - not a feature release)
+
+- **Round 2 of testing Tools-menu registration.** v1.11.1's test never ran at all (no [SW2026 TEST] log lines appeared) - meaning this runtime doesn't execute top-level script code, only the specific named function (`onGcodeProgramLoad`) it looks for. This version moves the exact same probe to the very first line inside `onGcodeProgramLoad`, which we know for certain executes. Load any G-code file and check the plugin log for `[SW2026 TEST]` lines, and check the Tools tab for a "SW2026 Test Menu Item" entry.
+
 ## v1.11.1 (EXPERIMENTAL - not a feature release)
 
 - **Testing whether Tools-menu registration is possible in this runtime**, ahead of building the Tool Wear Compensation reopen-anytime feature. Adds a throwaway "SW2026 Test Menu Item" entry to the Tools tab (if `pluginContext.registerToolMenu` exists here) that just opens a "It works!" dialog. Check the plugin log for `[SW2026 TEST]` lines either way - they'll say whether the API exists and whether the call succeeded. Also worth checking: load two or three different files and see if the Tools tab shows one "SW2026 Test Menu Item" entry or several duplicates, since this whole script re-runs on every file load.
