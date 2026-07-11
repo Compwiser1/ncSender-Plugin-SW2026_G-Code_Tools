@@ -309,6 +309,7 @@ function escapeHtmlServerSide(s) {
 function parseOperations(content) {
   const lines = content.split(/\r?\n/);
   const opPattern = /^\(\s*Operation\s*#(\d+):\s*(.+?)\s*\)\s*$/i;
+  const notesPattern = /^\(\s*Notes:\s*(.*?)\s*\)\s*$/i;
   const toolChangePattern = /T\s*0*(\d+)\s+M0*6/i;
 
   let currentTool = null;
@@ -324,9 +325,19 @@ function parseOperations(content) {
     const opMatch = line.match(opPattern);
     if (opMatch) {
       if (currentOp) currentOp.endLine = i - 1;
+      // The post processor always writes a "( Notes: ... )" comment on
+      // the line immediately following the operation header - grab it
+      // here so the dialog can show it under the operation name without
+      // re-parsing the file client-side.
+      let opNotes = '';
+      if (i + 1 < lines.length) {
+        const notesMatch = lines[i + 1].match(notesPattern);
+        if (notesMatch) opNotes = notesMatch[1];
+      }
       currentOp = {
         opNumber: parseInt(opMatch[1], 10),
         opName: opMatch[2],
+        opNotes: opNotes,
         toolNumber: currentTool,
         startLine: i + 1,
         endLine: null
@@ -400,6 +411,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .sw-section-title {
         display: flex; align-items: center; gap: 10px;
         font-size: 1.02rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.02em;
       }
       .sw-chevron {
         display: inline-flex; align-items: center; justify-content: center;
@@ -566,7 +578,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           <div class="sw-section-title">
             <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
             <span class="sw-section-icon">&#129520;</span>
-            <span>Tool management</span>
+            <span>Tool Manager</span>
           </div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
@@ -607,7 +619,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           <div class="sw-section-title">
             <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
             <span class="sw-section-icon">&#128737;&#65039;</span>
-            <span>Operation management</span>
+            <span>Operation Manager</span>
           </div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
@@ -629,7 +641,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           </table>
           <div class="sw-section-actions">
             <button id="applySafetyBtn" type="button" class="btn" disabled>Apply My Safety Net</button>
-            <button id="livingEdgeBtn" type="button" class="btn btn-glow-red">Living On The Edge</button>
+            <button id="livingEdgeBtn" type="button" class="btn btn-glow-red">Live On The Edge</button>
           </div>
         </div>
       </div>
@@ -1259,9 +1271,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
               '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
               '</div></div>';
+            const opCell = '<span class="gc-type">' + escapeHtml(op.opName) + '</span>' +
+              (op.opNotes ? '<span style="display:block; font-style:italic; font-size:0.85em; opacity:0.75; white-space:normal; word-break:break-word; margin-top:2px;">' + escapeHtml(op.opNotes) + '</span>' : '');
             return '<tr>' +
               '<td style="padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid var(--color-border, #2a2e33);">' + op.opNumber + '</td>' +
-              '<td style="padding:8px 10px; font-style:italic; white-space:normal; word-break:break-word; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
+              '<td class="gcode-cell" style="padding:8px 10px; white-space:normal; word-break:break-word; border-bottom:1px solid var(--color-border, #2a2e33);">' + opCell + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '\\u2014') + '</td>' +
               '<td class="gcode-cell" style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + buildToolDescCell(findRowByToolNumber(op.toolNumber)) + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + zCell + '</td>' +
@@ -1504,7 +1518,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
     throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
   }
 
-  const response = pluginContext.showDialog('SolidWorks 2026 G-Code Tools', html, { closable: false });
+  const response = pluginContext.showDialog('SolidWorks G-Code Manager', html, { closable: false });
 
   if (response && response.action) {
     return response;

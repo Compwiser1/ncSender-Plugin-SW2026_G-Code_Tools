@@ -1,3 +1,10 @@
+## v1.13.3 (EXPERIMENTAL — naming + operation notes)
+
+- **Dialog title changed** from "SolidWorks 2026 G-Code Tools" to **"SolidWorks G-Code Manager"**.
+- **Section headers renamed and now render in uppercase**: "Tool management" → **TOOL MANAGER**, "Operation management" → **OPERATION MANAGER**.
+- **"Living On The Edge" renamed to "Live On The Edge"** (grammar fix).
+- **Operation management's Operation column now shows the operation's Notes comment**, not just its name - the post processor always writes a `( Notes: ... )` line directly under each `( Operation #N: Name )` header, and that's now parsed and displayed. Operation name is bold, notes render smaller and italic underneath, matching the Tool Description column's visual style (name bold, detail italic) - unlike Tool Description, this text wraps rather than truncating.
+
 ## v1.13.2 (EXPERIMENTAL — layout tweaks continued)
 
 - **"Skipped" badge is now red** instead of gray, matching the red glow on the "I Don't Need This" / "Living On The Edge" buttons that produce that state.

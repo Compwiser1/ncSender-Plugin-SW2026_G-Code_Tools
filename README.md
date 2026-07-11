@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.13.2 (EXPERIMENTAL layout — see note below)
+**Version**: 1.13.3 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -12,8 +12,8 @@ An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post 
 
 v1.13.0 is a first draft of a redesigned dialog and is being tested live — expect follow-up releases as feedback comes in. The single flat dialog is now split into two collapsible sections, both **collapsed by default** so the whole workflow is visible at a glance before you dive into either one:
 
-- **🧰 Tool management** — the existing tool table + magazine slot carousel. Click **Organize My Tools** to add new tools to the library, auto-resolve conflicts, and auto-assign slots (section turns **✅ Ready to go!** and collapses), or click **I Don't Need This** to skip it (section turns **⏭️ Skipped**).
-- **🛡️ Operation management** — the tool wear compensation table. Click **Apply My Safety Net** to lock in your Z/X&Y values (section turns **✅ Ready to go!**), or click **Living On The Edge** to skip wear comp entirely (section turns **⏭️ Skipped**).
+- **🧰 Tool Manager** — the existing tool table + magazine slot carousel. Click **Organize My Tools** to add new tools to the library, auto-resolve conflicts, and auto-assign slots (section turns **✅ Ready to go!** and collapses), or click **I Don't Need This** to skip it (section turns **⏭️ Skipped**).
+- **🛡️ Operation Manager** — the tool wear compensation table. Click **Apply My Safety Net** to lock in your Z/X&Y values (section turns **✅ Ready to go!**), or click **Live On The Edge** to skip wear comp entirely (section turns **⏭️ Skipped**).
 
 Both sections start at **⏳ In progress...** and can be reopened and changed at any time. Nothing is written to the G-code file until you click **⚡ Bring This G-Code To Life!** at the bottom — that button stays grayed out until *both* sections have been resolved (either organized/applied or explicitly skipped). It then applies whichever combination of slot translation and wear compensation each section locked in, in one combined rewrite, and reloads the file.
 
@@ -23,7 +23,7 @@ Both sections start at **⏳ In progress...** and can be reopened and changed at
 
 On G-code load, this plugin opens a single dialog with two sections:
 
-### 1. Tool management — Tool Library Sync
+### 1. Tool Manager — Tool Library Sync
 Parses the tool summary table SolidWorks 2026 / FrankenOKO writes at the bottom of every file:
 
 ```
@@ -44,8 +44,8 @@ Once a tool is in the library, click its **Slot** badge to open a picker and ass
 
 **Organize My Tools** handles all of this at once: adds every new tool to the library, auto-resolves conflicts, and fills every unassigned slot. If the magazine doesn't have enough empty slots, tools occupying a slot but not used anywhere in this file are evicted (cleared from their slot, not deleted from the library) to make room — you'll see exactly what will be evicted and have to confirm before anything happens. Tools this file actually needs are never evicted.
 
-### 2. Operation management — Tool Wear Compensation
-Lists every **operation** in the file (not every tool), each with independent **Z Comp** and **X&Y Comp** values (-1.00 to 1.00). **Apply My Safety Net** locks in whatever values you've entered; **Living On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless.
+### 2. Operation Manager — Tool Wear Compensation
+Lists every **operation** in the file (not every tool), each with independent **Z Comp** and **X&Y Comp** values (-1.00 to 1.00). **Apply My Safety Net** locks in whatever values you've entered; **Live On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless.
 
 ### 3. Bring This G-Code To Life!
 Once both sections are resolved, this rewrites `T##`/`H##` references to the assigned slot numbers (e.g. `T18 M06` → `T3 M06`, original tool number preserved in a comment) and/or shifts G-code coordinates per your wear comp values — whichever section(s) you organized rather than skipped — in one combined pass, then reloads the translated file so the ATC moves to the correct physical position.
