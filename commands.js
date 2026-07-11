@@ -364,6 +364,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .col-toolnum { text-align: center; }
       .col-status { text-align: center; }
       .col-slot { text-align: center; }
+      .tools-table th.col-toolnum, .tools-table th.col-status, .tools-table th.col-slot { text-align: center; }
       .gcode-cell { overflow: hidden; }
       .gcode-cell .gc-type { font-weight: 700; }
       .gcode-cell .gc-detail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; font-style: italic; font-size: 0.85em; }
@@ -386,8 +387,16 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .btn-secondary:hover { background: var(--color-border, #444); }
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
+        display: inline-flex; align-items: center; gap: 5px;
+        background: var(--color-surface, #0e1113);
+        border: 1px solid var(--color-border, #444);
+        border-radius: 5px; padding: 3px 8px 3px 10px;
       }
-      .slot-cell:hover { opacity: 0.8; }
+      .slot-cell::after {
+        content: '\\25BE';
+        font-size: 0.7em; font-weight: 400; color: var(--color-text-secondary, #999);
+      }
+      .slot-cell:hover { border-color: var(--color-accent, #1abc9c); background: var(--color-surface-muted, #1a1a1a); }
       .slot-cell-placeholder { font-size: 0.65rem; color: #f59e0b; font-weight: 600; cursor: pointer; }
       .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
@@ -1164,7 +1173,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
   }
 
-  const response = pluginContext.showDialog('SW2026 G-Code Tools (Tool Library & Slot Mapping)', html, { closable: false });
+  const response = pluginContext.showDialog('SolidWorks 2026 G-Code Tools', html, { closable: false });
 
   if (response && response.action) {
     return response;

@@ -1,3 +1,9 @@
+## v1.7.1
+
+- **Fix: table headers weren't actually centered.** Found the real cause: `.tools-table th` (class + element selector) had higher CSS specificity than `.col-toolnum`/`.col-status`/`.col-slot` (single-class selectors) alone, so the header's default left-alignment always won regardless of source order. Data cells were never affected by this (no competing rule), which is why only the headers looked wrong. Fixed by adding a more specific selector for the header cells.
+- **Slot values now look like an actual dropdown** — bordered box with a ▾ chevron, background highlight on hover — instead of plain clickable text that didn't visually signal it was interactive.
+- **Dialog title renamed** to "SolidWorks 2026 G-Code Tools" (was "SW2026 G-Code Tools (Tool Library & Slot Mapping)").
+
 ## v1.7.0
 
 - **Confirmed (no code change needed):** slot reassignment already works at any time, including after "Add Tools & Auto-Assign Slots" completes or once the file shows "All Tools Ready" - click any tool's Slot value in the table to reassign it.
