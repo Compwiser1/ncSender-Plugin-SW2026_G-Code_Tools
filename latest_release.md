@@ -1,3 +1,16 @@
+## v1.12.0
+
+**Tool Wear Compensation - real feature, not experimental.**
+
+Since `pluginContext.registerToolMenu()` was confirmed unavailable in this runtime (tested in v1.11.1/v1.11.2 - no menu item ever appeared, and no "Tools tab" could even be found in the app), this reuses the one mechanism proven to work throughout this whole plugin: `onGcodeProgramLoad`. **Reopen it by reloading the same already-processed file** - the plugin recognizes its own marker and opens Tool Wear Compensation instead of re-running the tool sync/slot workflow.
+
+- Lists every **operation** in the file (e.g. "Operation #5: Center Drill1"), not every tool - a tool used across several operations gets a separate row and separate compensation values for each one.
+- Two independent values per operation: **Z Comp** and **X&Y Comp**, each a signed `#.##` value from -1.00 to 1.00.
+- Applying rewrites the G-code: every absolute-mode (G90) X/Y coordinate in that operation's lines shifts by the X&Y value, every absolute-mode Z or R (canned-cycle retract plane) coordinate shifts by the Z value.
+- **G91 (incremental) mode is never touched.** This was a real, verified risk during development: a standard `G91 G28 Z0` tool-change retract command technically fell inside an operation's calculated line range in a real sample file, and a naive coordinate-shift would have corrupted the tool-change retract distance - a genuine collision risk. The transform tracks G90/G91 modal state through the whole file and only ever shifts absolute-mode coordinates.
+- Values do **not** persist between dialog sessions - every reopen starts fresh at 0.00, by design.
+- Verified against the actual shipped code (not a standalone approximation) with the real sample G-code file before release, including the G91 safety case above.
+
 ## v1.11.2 (EXPERIMENTAL - not a feature release)
 
 - **Round 2 of testing Tools-menu registration.** v1.11.1's test never ran at all (no [SW2026 TEST] log lines appeared) - meaning this runtime doesn't execute top-level script code, only the specific named function (`onGcodeProgramLoad`) it looks for. This version moves the exact same probe to the very first line inside `onGcodeProgramLoad`, which we know for certain executes. Load any G-code file and check the plugin log for `[SW2026 TEST]` lines, and check the Tools tab for a "SW2026 Test Menu Item" entry.

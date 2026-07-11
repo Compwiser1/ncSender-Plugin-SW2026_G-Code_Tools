@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.11.2
+**Version**: 1.12.0
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 

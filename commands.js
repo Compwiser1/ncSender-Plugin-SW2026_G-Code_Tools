@@ -56,32 +56,15 @@ function onGcodeProgramLoad(content, context, settings) {
   // on unhandled JS exceptions. Always return original content on failure
   // (host sees a graceful fallback, user can still load the file as-is).
   try {
-    // === EXPERIMENTAL TEST - NOT the real feature yet ===
-    // The previous test placed this same probe at the top level of the
-    // file, outside any function - it never ran at all (not even the
-    // safeLog calls), which tells us this runtime doesn't execute
-    // top-level script code, only the specific named functions it looks
-    // for (onGcodeProgramLoad). Testing again from inside a function we
-    // KNOW executes, to isolate whether registerToolMenu itself exists.
-    try {
-      if (typeof pluginContext !== 'undefined' && pluginContext && typeof pluginContext.registerToolMenu === 'function') {
-        pluginContext.registerToolMenu('SW2026 Test Menu Item', function() {
-          pluginContext.showDialog(
-            'Test Dialog',
-            '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;"><h2>It works!</h2><p>registerToolMenu() and showDialog() both work in this runtime.</p></div>',
-            {}
-          );
-        });
-        safeLog('[SW2026 TEST] registerToolMenu call completed without throwing (called from inside onGcodeProgramLoad)');
-      } else {
-        safeLog('[SW2026 TEST] pluginContext.registerToolMenu is NOT available (typeof: ' +
-          (typeof pluginContext !== 'undefined' && pluginContext ? typeof pluginContext.registerToolMenu : 'no pluginContext') + ')');
-      }
-    } catch (testErr) {
-      safeLog('[SW2026 TEST] registerToolMenu threw: ' + (testErr && testErr.message ? testErr.message : String(testErr)));
-    }
-
     if (content && content.length > 0 && content.substring(0, 80).indexOf(SW2026_MARKER) !== -1) {
+      // This file was already processed by this plugin (tool sync + slot
+      // translation already happened). Reloading it a second time is how
+      // the user reopens Tool Wear Compensation adjustment without
+      // reloading the original program - registerToolMenu was tested and
+      // confirmed unavailable in this runtime (see v1.11.1/v1.11.2), so
+      // this reuses the one mechanism we know works: onGcodeProgramLoad
+      // itself, firing again on a manual reload of the same file.
+      showWearCompDialog(content, context && context.filename, context && context.sourcePath);
       return content;
     }
 
@@ -295,6 +278,61 @@ function determineOverallStatus(rows) {
   const status = hasConflicts ? 'red' : ((hasNew || hasUnassigned) ? 'yellow' : 'green');
 
   return { status: status, allReady: allReady, hasConflicts: hasConflicts, hasNew: hasNew, hasUnassigned: hasUnassigned };
+}
+
+// === Parse operations (for Tool Wear Compensation) ===
+// Identifies each "( Operation #N: Name )" section the post-processor
+// writes, and which tool was active at that point (the most recent
+// preceding M6 tool change). An operation's line range runs from right
+// after its own header comment to right before the NEXT operation's
+// header (or end of file) - this can include the next tool-change
+// sequence at the tail end, which is why the wear-compensation transform
+// separately tracks G90/G91 modal state and only touches absolute-mode
+// coordinates, regardless of which operation's range a line nominally
+// falls under.
+// Server-side HTML escaping - the existing escapeHtml() only exists
+// inside showUnifiedDialog's browser-side <script> block, a completely
+// separate execution context from this server-side function.
+function escapeHtmlServerSide(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseOperations(content) {
+  const lines = content.split(/\r?\n/);
+  const opPattern = /^\(\s*Operation\s*#(\d+):\s*(.+?)\s*\)\s*$/i;
+  const toolChangePattern = /T\s*0*(\d+)\s+M0*6/i;
+
+  let currentTool = null;
+  const operations = [];
+  let currentOp = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const tc = line.match(toolChangePattern);
+    if (tc) currentTool = parseInt(tc[1], 10);
+
+    const opMatch = line.match(opPattern);
+    if (opMatch) {
+      if (currentOp) currentOp.endLine = i - 1;
+      currentOp = {
+        opNumber: parseInt(opMatch[1], 10),
+        opName: opMatch[2],
+        toolNumber: currentTool,
+        startLine: i + 1,
+        endLine: null
+      };
+      operations.push(currentOp);
+    }
+  }
+  if (currentOp) currentOp.endLine = lines.length - 1;
+
+  return operations;
 }
 
 // === Unified dialog: sync + slot mapping + translation ===
@@ -1302,4 +1340,181 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     return response;
   }
   return { action: 'bypass' };
+}
+
+// === Tool Wear Compensation dialog (reopen via reloading an
+// already-processed file) ===
+//
+// Applying a value here rewrites the G-code: every absolute-mode (G90)
+// X/Y coordinate in that operation's line range shifts by the X&Y value,
+// and every absolute-mode Z/R (canned-cycle retract plane) coordinate
+// shifts by the Z value. G91 (incremental) mode lines are never touched,
+// since those coordinates are relative deltas, not absolute positions -
+// shifting them would be wrong regardless of which operation they're in.
+// This was verified against a real corruption risk: a G91 G28 Z0
+// tool-change retract line that technically fell inside an operation's
+// calculated line range.
+function showWearCompDialog(content, filename, sourcePath) {
+  const operations = parseOperations(content);
+
+  if (operations.length === 0) {
+    pluginContext.showDialog(
+      'Tool Wear Compensation',
+      '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;">No operations found in this file.</div>',
+      { closable: true }
+    );
+    return;
+  }
+
+  const rowsHtml = operations.map(function(op, idx) {
+    return '<tr>' +
+      '<td style="padding:8px 10px; text-align:center; font-weight:700;">' + op.opNumber + '</td>' +
+      '<td style="padding:8px 10px;">' + escapeHtmlServerSide(op.opName) + '</td>' +
+      '<td style="padding:8px 10px; text-align:center;">' + (op.toolNumber !== null ? op.toolNumber : '—') + '</td>' +
+      '<td style="padding:8px 10px; text-align:center;"><input type="text" class="wc-input" inputmode="decimal" ' +
+        'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="z"></td>' +
+      '<td style="padding:8px 10px; text-align:center;"><input type="text" class="wc-input" inputmode="decimal" ' +
+        'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="xy"></td>' +
+      '</tr>';
+  }).join('');
+
+  const html = `
+    <style>
+      body { margin:0; }
+      .wc-container { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--color-text-primary, #e0e0e0); padding: 16px 20px; max-width: 720px; margin: 0 auto; }
+      .wc-header { text-align: center; font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; }
+      .wc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+      .wc-table th { text-align: center; padding: 8px 10px; background: var(--color-surface-muted-2, #1f2327); color: #fff; border-bottom: 2px solid var(--color-border, #3a3f45); }
+      .wc-table td { border-bottom: 1px solid var(--color-border, #2a2e33); }
+      .wc-input { width: 4.5em; text-align: center; background: var(--color-surface, #0e1113); border: 1px solid var(--color-border, #444); border-radius: 5px; color: var(--color-text-primary, #e0e0e0); padding: 4px; }
+      .wc-actions { display: flex; gap: 14px; justify-content: center; margin-top: 16px; }
+      .wc-btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-transform: uppercase; }
+      .wc-btn:disabled { opacity: 0.5; cursor: default; }
+      .wc-btn-apply { background: #1a4d2e; color: #fff; border: 1px solid #28a745; }
+      .wc-btn-cancel { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
+    </style>
+    <div class="wc-container">
+      <div class="wc-header">Tool Wear Compensation</div>
+      <table class="wc-table">
+        <thead><tr><th>Op #</th><th style="text-align:left;">Operation</th><th>Tool #</th><th>Z Comp</th><th>X&amp;Y Comp</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="wc-actions">
+        <button type="button" class="wc-btn wc-btn-apply" id="wcApplyBtn">Apply</button>
+        <button type="button" class="wc-btn wc-btn-cancel" id="wcCancelBtn">Cancel</button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        const operations = ${JSON.stringify(operations)};
+        const filename = ${JSON.stringify(filename || '')};
+        const sourcePath = ${JSON.stringify(sourcePath || '')};
+
+        function shiftLine(line, xyOffset, zOffset) {
+          return line.replace(/([XYZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
+            const num = parseFloat(numStr);
+            const delta = (letter === 'X' || letter === 'Y') ? xyOffset : zOffset;
+            const shifted = Math.round((num + delta) * 10000) / 10000;
+            return letter + shifted;
+          });
+        }
+
+        function hasGWord(line, word) {
+          const tokens = line.toUpperCase().split(' ');
+          for (let i = 0; i < tokens.length; i++) {
+            if (tokens[i] === word) return true;
+          }
+          return false;
+        }
+
+        function applyWearCompensation(fileContent, opOffsets) {
+          const lines = fileContent.split(/\\r?\\n/);
+          const lineOffset = new Array(lines.length).fill(null);
+
+          operations.forEach(function(op, idx) {
+            const offset = opOffsets[idx];
+            if (!offset || (offset.xy === 0 && offset.z === 0)) return;
+            for (let i = op.startLine; i <= op.endLine && i < lines.length; i++) {
+              lineOffset[i] = offset;
+            }
+          });
+
+          let absoluteMode = true;
+          const result = lines.map(function(line, i) {
+            if (hasGWord(line, 'G91')) absoluteMode = false;
+            if (hasGWord(line, 'G90')) absoluteMode = true;
+
+            const offset = lineOffset[i];
+            if (!offset) return line;
+            if (!absoluteMode) return line;
+            if (/^\\s*\\(/.test(line)) return line;
+
+            return shiftLine(line, offset.xy, offset.z);
+          });
+
+          return result.join('\\r\\n');
+        }
+
+        document.getElementById('wcCancelBtn').addEventListener('click', function() {
+          window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'cancel' } }, '*');
+        });
+
+        document.getElementById('wcApplyBtn').addEventListener('click', async function() {
+          const applyBtn = document.getElementById('wcApplyBtn');
+          const cancelBtn = document.getElementById('wcCancelBtn');
+          applyBtn.disabled = true; cancelBtn.disabled = true;
+          applyBtn.textContent = 'Applying…';
+
+          try {
+            const opOffsets = {};
+            document.querySelectorAll('.wc-input').forEach(function(input) {
+              const idx = input.getAttribute('data-op-idx');
+              const axis = input.getAttribute('data-axis');
+              const val = parseFloat(input.value);
+              if (!opOffsets[idx]) opOffsets[idx] = { xy: 0, z: 0 };
+              if (!isNaN(val)) opOffsets[idx][axis] = val;
+            });
+
+            let fileContent;
+            if (sourcePath) {
+              const r = await fetch('/api/gcode-files/file?path=' + encodeURIComponent(sourcePath));
+              if (!r.ok) throw new Error('Failed to fetch source file: HTTP ' + r.status);
+              const data = await r.json();
+              fileContent = data.content;
+            } else {
+              const r = await fetch('/api/gcode-files/current/download');
+              if (!r.ok) throw new Error('Failed to download G-code: HTTP ' + r.status);
+              fileContent = await r.text();
+            }
+
+            const transformed = applyWearCompensation(fileContent, opOffsets);
+            const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
+            const delays = [0, 250, 500, 1000, 2000, 4000];
+            function attempt(i) {
+              fetch('/api/gcode-files/load-temp', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              }).then(function(r) {
+                if (r.ok) return;
+                if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
+                else console.error('[SW2026 wear-comp] load-temp failed after retries: HTTP ' + r.status);
+              }).catch(function(err) {
+                if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
+                else console.error('[SW2026 wear-comp] load-temp failed after retries:', err);
+              });
+            }
+            setTimeout(function() { attempt(0); }, delays[0]);
+
+            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'apply' } }, '*');
+          } catch (err) {
+            applyBtn.disabled = false; cancelBtn.disabled = false;
+            applyBtn.textContent = 'Apply';
+            alert('Failed to apply wear compensation: ' + (err && err.message ? err.message : err));
+          }
+        });
+      })();
+    <\\/script>
+  `;
+
+  pluginContext.showDialog('Tool Wear Compensation', html, { closable: true });
 }
