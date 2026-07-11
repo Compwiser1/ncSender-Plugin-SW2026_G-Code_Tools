@@ -1,3 +1,10 @@
+## v1.13.11 (EXPERIMENTAL — stat sizing, unified header format, caution icon, shorter carousel)
+
+- **Tool Manager header stats are larger** (0.78rem → 0.92rem), easier to read at a glance.
+- **Operation Manager's header now uses the same format as Tool Manager's**: stats sit on the same line as the title, centered between the title and the status badge, instead of on their own line below the title.
+- **"Living On The Edge" now shows a caution/warning icon (⚠️)** instead of the mountain/cliff icon from v1.13.8.
+- **The magazine carousel image is about 5% shorter overall** (592px → 557px for an 8-slot magazine, as tested) - only the vertical spacing between slots, cap height, and top/bottom padding were reduced; circle radii and the image's width are untouched, so nothing gets visually squished. This is explicitly a "let's try it" experiment per your request and easy to revert if it doesn't look right in person.
+
 ## v1.13.10 (EXPERIMENTAL — reverted row height, removed program name, inline stats)
 
 - **Reverted v1.13.9's row-height reduction** - the tools table already scrolls independently, so shrinking rows didn't address the real constraint, which is the magazine carousel image driving the section's overall visible height, not the table. Rows are back to 64px.

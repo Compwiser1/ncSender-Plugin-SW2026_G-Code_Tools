@@ -398,7 +398,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         padding: 12px 16px; cursor: pointer; user-select: none;
       }
       .sw-section-header:hover { background: var(--color-border, #232323); }
-      .sw-section-title-block { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .sw-section-title {
         display: flex; align-items: center; gap: 10px;
         font-size: 1.02rem; font-weight: 700;
@@ -406,7 +405,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         flex-shrink: 0;
       }
       .sw-section-stats {
-        font-size: 0.78rem; font-weight: 400; font-style: normal;
+        font-size: 0.92rem; font-weight: 400; font-style: normal;
         text-transform: none; letter-spacing: normal;
         color: var(--color-text-secondary, #999);
         margin-left: 60px;
@@ -417,7 +416,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin-left: 0;
         text-align: center;
       }
-      .stat-dot { font-size: 0.7rem; vertical-align: 1px; }
+      .stat-dot { font-size: 0.82rem; vertical-align: 1px; }
       .sw-chevron {
         display: inline-flex; align-items: center; justify-content: center;
         font-size: 1.5rem; line-height: 0.9;
@@ -616,14 +615,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       <div class="sw-section" id="opSection">
         <div class="sw-section-header" id="opSectionHeader">
-          <div class="sw-section-title-block">
-            <div class="sw-section-title">
-              <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
-              <span class="sw-section-icon">&#128737;&#65039;</span>
-              <span>Operation Manager</span>
-            </div>
-            <div class="sw-section-stats" id="opSectionStats"></div>
+          <div class="sw-section-title">
+            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+            <span class="sw-section-icon">&#128737;&#65039;</span>
+            <span>Operation Manager</span>
           </div>
+          <div class="sw-section-stats sw-section-stats--inline" id="opSectionStats"></div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
           </span>
@@ -713,9 +710,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // that state can never drift out of sync with each other.
         const TOOL_BADGE_LABELS = { ready: 'Tools Organized', skipped: "I Didn't Need This" };
         const OP_BADGE_LABELS = { ready: 'Safety Net Applied', skipped: 'Living On The Edge' };
-        // Mountain cliff icon for Operation Manager's skipped state - a
+        // Caution/warning icon for Operation Manager's skipped state - a
         // better fit for "Living On The Edge" than the generic skip icon.
-        const OP_BADGE_ICONS = { skipped: '\\u26F0\\uFE0F' };
+        const OP_BADGE_ICONS = { skipped: '\\u26A0\\uFE0F' };
 
         function applySectionBadge(badgeId, state, labelOverride, iconOverride) {
           const b = SECTION_BADGES[state];
@@ -761,15 +758,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         function renderCarousel() {
           // Locked visual proportions from the approved design, all scaled
           // by SCALE. Adjust SCALE alone to resize everything proportionally.
+          // HEIGHT_SCALE additionally trims 5% off just the vertical-extent
+          // measurements (slot spacing, cap height/gap, top/bottom padding)
+          // to show more of the section without scrolling - circle radii
+          // and widths are untouched so nothing gets squished into an oval.
           const SCALE = 0.82;
-          const PITCH = Math.round(80 * SCALE);
-          const FIRST_CY = Math.round(54 * SCALE);
+          const HEIGHT_SCALE = 0.95;
+          const PITCH = Math.round(80 * SCALE * HEIGHT_SCALE);
+          const FIRST_CY = Math.round(54 * SCALE * HEIGHT_SCALE);
           const BULGE_R = Math.round(52 * SCALE);
           const INNER_R = Math.round(35 * SCALE);
-          const CAP_GAP = Math.round(42 * SCALE);
-          const CAP_H = Math.round(53 * SCALE);
+          const CAP_GAP = Math.round(42 * SCALE * HEIGHT_SCALE);
+          const CAP_H = Math.round(53 * SCALE * HEIGHT_SCALE);
           const CAP_W = Math.round(88 * SCALE);
-          const BOTTOM_PAD = Math.max(2, Math.round(3 * SCALE));
+          const BOTTOM_PAD = Math.max(2, Math.round(3 * SCALE * HEIGHT_SCALE));
           const cx = Math.round(92 * SCALE);
           const RIGHT_MARGIN = Math.max(6, Math.round(8 * SCALE));
           const SVG_W = cx + BULGE_R + RIGHT_MARGIN;
@@ -782,10 +784,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const LABEL_DY = Math.round(-5 * SCALE);
           const NUMBER_DY = Math.round(19 * SCALE);
           const DIGIT_DY = Math.round(8 * SCALE);
-          const KNOB_DY = Math.round(29 * SCALE);
-          const TLS_DY = Math.round(33 * SCALE);
+          const KNOB_DY = Math.round(29 * SCALE * HEIGHT_SCALE);
+          const TLS_DY = Math.round(33 * SCALE * HEIGHT_SCALE);
           const DIGIT_X = Math.round(16 * SCALE);
-          const TOP_PAD = Math.max(4, Math.round(6 * SCALE));
+          const TOP_PAD = Math.max(4, Math.round(6 * SCALE * HEIGHT_SCALE));
 
           const n = Math.max(magazineSize, 1);
           const lastCy = TOP_PAD + FIRST_CY + (n - 1) * PITCH;
