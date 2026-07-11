@@ -403,9 +403,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         font-size: 1.02rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.02em;
         flex-shrink: 0;
+        min-width: 230px;
       }
       .sw-section-stats {
-        font-size: 0.92rem; font-weight: 400; font-style: normal;
+        font-size: 1.02rem; font-weight: 400; font-style: normal;
         text-transform: none; letter-spacing: normal;
         color: var(--color-text-secondary, #999);
         margin-left: 60px;
@@ -416,7 +417,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin-left: 0;
         text-align: center;
       }
-      .stat-dot { font-size: 0.82rem; vertical-align: 1px; }
+      .stat-dot { font-size: 0.9rem; vertical-align: 1px; }
+      .sw-section-badge-slot {
+        display: inline-flex; justify-content: flex-end;
+        min-width: 200px; flex-shrink: 0;
+      }
       .sw-chevron {
         display: inline-flex; align-items: center; justify-content: center;
         font-size: 1.5rem; line-height: 0.9;
@@ -579,9 +584,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             <span>Tool Manager</span>
           </div>
           <div class="sw-section-stats sw-section-stats--inline" id="toolSectionStats"></div>
-          <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
-            <span class="sw-badge-icon">&#8987;</span>In progress...
-          </span>
+          <div class="sw-section-badge-slot">
+            <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
+              <span class="sw-badge-icon">&#8987;</span>In progress...
+            </span>
+          </div>
         </div>
         <div class="sw-section-body" id="toolSectionBody" style="display:none;">
           <div class="sw-main">
@@ -621,9 +628,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             <span>Operation Manager</span>
           </div>
           <div class="sw-section-stats sw-section-stats--inline" id="opSectionStats"></div>
-          <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
-            <span class="sw-badge-icon">&#8987;</span>In progress...
-          </span>
+          <div class="sw-section-badge-slot">
+            <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
+              <span class="sw-badge-icon">&#8987;</span>In progress...
+            </span>
+          </div>
         </div>
         <div class="sw-section-body" id="opSectionBody" style="display:none;">
           <table class="wc-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
@@ -735,6 +744,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           toolSectionState = state;
           applySectionBadge('toolSectionBadge', state, TOOL_BADGE_LABELS[state]);
           if (state !== 'pending') setSectionCollapsed('toolSectionBody', 'toolSectionHeader', true);
+          document.getElementById('organizeBtn').disabled = (state === 'ready');
           updateLifeButton();
         }
 
@@ -904,7 +914,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const conflicts = rows.filter(function(r) { return r.action === 'conflict'; }).length;
 
           const el = document.getElementById('toolSectionStats');
-          el.innerHTML = total + ' tool' + (total === 1 ? '' : 's') +
+          el.innerHTML = '<strong>' + total + ' tool' + (total === 1 ? '' : 's') + '</strong>' +
             ' &middot; <span class="stat-dot" style="color:#28a745;">&#9679;</span> ' + inSync + ' In Sync' +
             ' &middot; <span class="stat-dot" style="color:#f97316;">&#9679;</span> ' + newCount + ' New' +
             ' &middot; <span class="stat-dot" style="color:#dc3545;">&#9679;</span> ' + conflicts + ' Conflict' + (conflicts === 1 ? '' : 's');
@@ -928,7 +938,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const coverage = Object.keys(coveredOps).length;
 
           const el = document.getElementById('opSectionStats');
-          el.innerHTML = total + ' operation' + (total === 1 ? '' : 's') +
+          el.innerHTML = '<strong>' + total + ' operation' + (total === 1 ? '' : 's') + '</strong>' +
             ' &middot; ' + coverage + ' of ' + total + ' set' +
             ' &middot; spans ' + toolCount + ' tool' + (toolCount === 1 ? '' : 's');
         }

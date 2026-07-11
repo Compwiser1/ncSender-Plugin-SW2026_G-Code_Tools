@@ -1,3 +1,10 @@
+## v1.13.12 (EXPERIMENTAL — button gating, stat sizing/alignment/bold totals)
+
+- **"Organize My Tools" now grays out once Tool Manager's status reads "Tools Organized"**, so the button visibly reflects that the action already ran. It re-enables automatically if the section returns to "In progress...".
+- **Both header stat summaries are larger again** (0.92rem → 1.02rem).
+- **Both stat summaries now align to the same horizontal position** - the title area and status badge area on both headers now reserve the same fixed width regardless of text length ("Tool Manager" vs the longer "Operation Manager", and each badge's varying label length), so the centered stats line up between the two sections instead of drifting based on how long each header's title/badge text happens to be.
+- **The total count in each stat summary is now bold** - "**15 tools**" in Tool Manager, "**24 operations**" in Operation Manager - so the headline number stands out from the rest of the breakdown.
+
 ## v1.13.11 (EXPERIMENTAL — stat sizing, unified header format, caution icon, shorter carousel)
 
 - **Tool Manager header stats are larger** (0.78rem → 0.92rem), easier to read at a glance.
