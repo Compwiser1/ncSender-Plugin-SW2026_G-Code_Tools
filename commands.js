@@ -369,8 +369,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: var(--color-text-primary, #e0e0e0);
         padding: 14px 18px;
+        width: 1180px;
         max-width: 1180px;
         margin: 0 auto;
+        box-sizing: border-box;
       }
       .sw-header {
         display: flex; align-items: center; justify-content: space-between;
@@ -499,6 +501,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .row-status-badge--orange { background: rgba(249,115,22,0.2); color: #f97316; border-color: #f97316; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(249,115,22,0.55); }
       .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(153,153,153,0.4); }
       .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; box-shadow: 0 0 8px 1px rgba(220,53,69,0.55); }
+      .sw-section-badge.row-status-badge--red { font-size: 0.95rem; padding: 4px 10px; }
       .status-conflict-wrap { border: 3px solid #dc3545; border-radius: 16px; box-shadow: 0 0 10px 1px rgba(220,53,69,0.55); padding: 6px 8px; margin: -4px -8px; }
       .tool-num { font-weight: 700; }
       .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
@@ -687,7 +690,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         const SECTION_BADGES = {
           pending: { cls: 'orange', icon: '\\u23F3', label: 'In progress...' },
           ready:   { cls: 'green',  icon: '\\u2705', label: 'Ready to go!' },
-          skipped: { cls: 'gray',   icon: '\\u23ED\\uFE0F', label: 'Skipped' }
+          skipped: { cls: 'red',    icon: '\\u23ED\\uFE0F', label: 'Skipped' }
         };
 
         function applySectionBadge(badgeId, state) {
@@ -1258,7 +1261,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               '</div></div>';
             return '<tr>' +
               '<td style="padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid var(--color-border, #2a2e33);">' + op.opNumber + '</td>' +
-              '<td style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
+              '<td style="padding:8px 10px; font-style:italic; white-space:normal; word-break:break-word; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '\\u2014') + '</td>' +
               '<td class="gcode-cell" style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + buildToolDescCell(findRowByToolNumber(op.toolNumber)) + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + zCell + '</td>' +

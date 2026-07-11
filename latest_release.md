@@ -1,3 +1,9 @@
+## v1.13.2 (EXPERIMENTAL — layout tweaks continued)
+
+- **"Skipped" badge is now red** instead of gray, matching the red glow on the "I Don't Need This" / "Living On The Edge" buttons that produce that state.
+- **Operation management's Operation column now shows the operation's comment text in italic**, matching the Tool Description column's style - unlike Tool Description, this text is allowed to wrap rather than being truncated with an ellipsis, since operation names/comments can run long.
+- **Tool management and Operation management now always render at the same width** (Tool management's, the wider of the two, since it also has to fit the tool table + magazine carousel side by side). Previously the dialog could size itself to whichever section happened to be expanded, so Operation management alone looked narrower - the container now holds a fixed width regardless of which section is open or closed.
+
 ## v1.13.1 (EXPERIMENTAL — layout tweaks from first live test)
 
 Follow-up fixes to the v1.13.0 two-section layout based on initial feedback:
