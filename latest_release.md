@@ -1,3 +1,14 @@
+## v1.13.9 (EXPERIMENTAL — real fix for "more visible without scrolling")
+
+- **Tool Manager's table rows are now 44px tall instead of 64px.** The 64px height was leftover from when each row had its own wear-comp stepper control (which needed the extra vertical room) - that column moved to Operation Manager back in v1.13.0, but the row height was never reduced afterward. With rows this much shorter, roughly 4-5 more tools are visible before the table needs to scroll internally, for a typical 8-slot magazine.
+- **Removed the two previous height-fix attempts** (v1.13.6's container padding, v1.13.7's spacer element) since neither had any visible effect - that was a signal the dialog's outer size isn't driven by page content at all, so padding/spacer tricks were the wrong lever. This release fixes the actual "more visible without scrolling" complaint a different way: by making better use of the space Tool Manager already has, rather than trying to grow the outer dialog frame.
+- Conflict rows (which show an extra library-vs-G-code diff underneath the status badge) still grow taller than 44px automatically to fit that content - only simple rows got shorter.
+
+## v1.13.8 (EXPERIMENTAL — icon fix, height fix still under investigation)
+
+- **"Living On The Edge" (Operation Manager's skipped state) now shows a mountain/cliff icon (⛰️)** instead of the generic skip icon - a better fit for the wording. Tool Manager's "I Didn't Need This" state keeps its original icon, unchanged.
+- **The dialog height issue is still unresolved.** Two different content-based approaches (v1.13.6's extra padding, v1.13.7's real spacer element) both had zero visible effect, which strongly suggests the dialog's rendered size isn't driven by our HTML content at all - more likely the host sets a fixed size via `pluginContext.showDialog()`'s options argument (currently only `{ closable: false }`), or via its own fixed dialog dimensions, and our page content simply scrolls or gets clipped inside that fixed frame regardless of how much content height we add. No CSS change was made this round for this issue - see the note in the response for what's needed to actually fix it.
+
 ## v1.13.7 (EXPERIMENTAL — badge wording + real height spacer)
 
 - **Badge wording updated per your latest preference**: Tool Manager now reads "Tools Organized" / "I Didn't Need This" (was "Organize My Tools" / "I Don't Need This"); Operation Manager now reads "Safety Net Applied" / "Living On The Edge" (was "Apply My Safety Net" / "Live On The Edge").

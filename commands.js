@@ -385,11 +385,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin: 0 auto;
         box-sizing: border-box;
       }
-      .sw-height-spacer {
-        display: block;
-        width: 100%;
-        height: 68px;
-      }
       .sw-header {
         display: flex; align-items: center; justify-content: space-between;
         flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
@@ -667,7 +662,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       </div>
 
       <button id="lifeBtn" type="button" class="btn btn-life" disabled>&#9889; Bring This G-Code To Life!</button>
-      <div class="sw-height-spacer" aria-hidden="true"></div>
     </div>
 
     <div id="slotSelectorOverlay" class="slot-selector-overlay">
@@ -731,12 +725,15 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // that state can never drift out of sync with each other.
         const TOOL_BADGE_LABELS = { ready: 'Tools Organized', skipped: "I Didn't Need This" };
         const OP_BADGE_LABELS = { ready: 'Safety Net Applied', skipped: 'Living On The Edge' };
+        // Mountain cliff icon for Operation Manager's skipped state - a
+        // better fit for "Living On The Edge" than the generic skip icon.
+        const OP_BADGE_ICONS = { skipped: '\\u26F0\\uFE0F' };
 
-        function applySectionBadge(badgeId, state, labelOverride) {
+        function applySectionBadge(badgeId, state, labelOverride, iconOverride) {
           const b = SECTION_BADGES[state];
           const el = document.getElementById(badgeId);
           el.className = 'row-status-badge row-status-badge--' + b.cls + ' sw-section-badge';
-          el.innerHTML = '<span class="sw-badge-icon">' + b.icon + '</span>' + (labelOverride || b.label);
+          el.innerHTML = '<span class="sw-badge-icon">' + (iconOverride || b.icon) + '</span>' + (labelOverride || b.label);
         }
 
         function setSectionCollapsed(bodyId, headerId, collapsed) {
@@ -758,7 +755,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
         function setOpSectionState(state) {
           opSectionState = state;
-          applySectionBadge('opSectionBadge', state, OP_BADGE_LABELS[state]);
+          applySectionBadge('opSectionBadge', state, OP_BADGE_LABELS[state], OP_BADGE_ICONS[state]);
           if (state !== 'pending') setSectionCollapsed('opSectionBody', 'opSectionHeader', true);
           updateLifeButton();
         }
@@ -972,7 +969,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
+            return '<tr style="height:44px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
           }).join('');
         }
 
