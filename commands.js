@@ -365,19 +365,19 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         border-radius: 5px; color: var(--color-text-primary, #e0e0e0);
         padding: 0 4px; height: 32px; box-sizing: border-box;
       }
-      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 62px; }
-      .wear-arrows { display: flex; flex-direction: column; justify-content: center; height: 62px; }
+      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 56px; }
+      .wear-arrows { display: flex; flex-direction: column; justify-content: center; height: 56px; }
       .wear-arrow {
         display: flex; align-items: center; justify-content: center;
         background: transparent; border: none; margin: 0;
-        padding: 14px 18px; box-sizing: border-box;
+        padding: 2px 18px; box-sizing: border-box;
         color: var(--color-text-secondary, #999);
         font-size: 1.5rem; line-height: 0.9; cursor: pointer; user-select: none;
         touch-action: manipulation;
       }
       .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
       .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
-      .wear-input::placeholder { color: var(--color-text-secondary, #666); }
+      .wear-input::placeholder { color: #75787c; }
       .gcode-cell { overflow: hidden; }
       .gcode-cell .gc-type { font-weight: 700; }
       .gcode-cell .gc-detail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; font-style: italic; font-size: 0.85em; }
@@ -394,7 +394,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
       .conflict-diff .lib-val { color: #f59e0b; }
       .conflict-diff .gcode-val { color: #1abc9c; }
-      .btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+      .btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
       .btn:disabled { opacity: 0.5; cursor: default; }
       .btn-primary { background: var(--color-accent, #1abc9c); color: white; }
       .btn-primary:hover { opacity: 0.9; }
@@ -430,7 +430,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       }
       .slot-cell:hover { border-color: var(--color-accent, #1abc9c); background: var(--color-surface-muted, #1a1a1a); }
       .slot-cell-placeholder { color: #f59e0b; font-weight: 600; cursor: pointer; }
-      .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+      .actions { display: flex; gap: 18px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
       .slot-selector-overlay.show { display: block; }
       .slot-selector-popup {
@@ -563,7 +563,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
           const NOTOOL_FS = Math.max(11, Math.round(20 * SCALE));
           const DIGIT_FS = Math.max(13, Math.round(26 * SCALE));
-          const TLS_FS = DIGIT_FS;
+          const TLS_FS = Math.max(9, Math.round(14 * SCALE));
           const KNOB_R = Math.max(8, Math.round(17 * SCALE));
           const LABEL_DY = Math.round(-5 * SCALE);
           const NUMBER_DY = Math.round(19 * SCALE);
@@ -651,7 +651,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           const capRect = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#0e1113"/>';
           const capExtras = '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
-            '<text x="2" y="' + tlsY + '" text-anchor="start" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
+            '<text x="4" y="' + tlsY + '" text-anchor="start" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
           carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
             defs + '<g filter="url(#outerOutline)">' + bulges + capRect + '</g>' + capExtras + bezels + inner + digits + '</svg>';
@@ -876,7 +876,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         function updateWearInputColor(input) {
           const val = parseFloat(input.value);
           if (isNaN(val) || val === 0) {
-            input.style.color = 'var(--color-text-primary, #e0e0e0)';
+            input.style.color = '#75787c';
           } else if (val > 0) {
             input.style.color = '#28a745';
           } else {

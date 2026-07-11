@@ -1,3 +1,11 @@
+## v1.11.0
+
+- **Fix: Tool Wear Compensation arrows were spread too far apart vertically.** The v1.10.4 glyph enlargement combined with the existing padding pushed the two arrows' combined natural height well past their container, forcing them apart. Reduced vertical padding sharply (kept horizontal padding, so touch width is unaffected) so they sit close together proportionally.
+- **Fix: "TLS" text crowded/overlapped the casing geometry.** Actually measured the numbers this time: "TLS" at the digit labels' font size and position would have extended well past the casing's left edge (a 3-character word is much wider than a single digit). Gave TLS its own smaller font size sized to fit the same gap a single digit uses, with real verified clearance before the casing.
+- **Tool Wear Compensation values show gray when 0.00** (matching the "Empty" circle gray), both for the placeholder and for an explicitly-entered/stepped zero.
+- **All button text is now uppercase.**
+- **Increased the gap between the bottom action buttons**, still centered as a group.
+
 ## v1.10.4
 
 - **Clarification fix: Tool Wear Compensation arrow glyphs enlarged, touch target left unchanged.** The previous version grew the invisible tap area again, which wasn't what was wanted - the actual touch target size from v1.10.2/3 was correct, it just looked disproportionate because the visible arrow glyph was tiny inside it. Font size increased from 0.85rem to 1.5rem so the arrow visually fills the same-sized touch target instead of floating small inside it.
