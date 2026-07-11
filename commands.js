@@ -49,6 +49,37 @@ function buildInitialConfig(raw) {
 // translated and we bail immediately.
 const SW2026_MARKER = '; ncSender-sw2026-transformed';
 
+// === EXPERIMENTAL TEST - NOT the real feature yet ===
+// Testing 3 unknowns before building the real Tool Wear Compensation
+// menu feature:
+//   1. Does pluginContext.registerToolMenu() exist in this Jint-sandbox
+//      runtime? It's documented for the *different* ES6-module plugin
+//      style (export function onLoad(ctx)), not confirmed for ours.
+//   2. Does it actually produce a working Tools-tab entry that opens
+//      a dialog when clicked?
+//   3. This whole script re-evaluates every time onGcodeProgramLoad
+//      fires - does calling this at top level (i.e. every time a file
+//      loads) create a NEW duplicate menu entry each time, or does
+//      ncSender deduplicate by label/id? Load a couple of different
+//      files and check the Tools tab for duplicates.
+try {
+  if (typeof pluginContext !== 'undefined' && pluginContext && typeof pluginContext.registerToolMenu === 'function') {
+    pluginContext.registerToolMenu('SW2026 Test Menu Item', function() {
+      pluginContext.showDialog(
+        'Test Dialog',
+        '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;"><h2>It works!</h2><p>registerToolMenu() and showDialog() both work in this runtime.</p></div>',
+        {}
+      );
+    });
+    safeLog('[SW2026 TEST] registerToolMenu call completed without throwing');
+  } else {
+    safeLog('[SW2026 TEST] pluginContext.registerToolMenu is NOT available in this runtime (typeof: ' +
+      (typeof pluginContext !== 'undefined' && pluginContext ? typeof pluginContext.registerToolMenu : 'no pluginContext') + ')');
+  }
+} catch (e) {
+  safeLog('[SW2026 TEST] registerToolMenu threw an error: ' + (e && e.message ? e.message : String(e)));
+}
+
 // === Entry point ===
 
 function onGcodeProgramLoad(content, context, settings) {
@@ -395,7 +426,13 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .conflict-diff .lib-val { color: #f59e0b; }
       .conflict-diff .gcode-val { color: #1abc9c; }
       .btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
-      .btn:disabled { opacity: 0.5; cursor: default; }
+      .btn:disabled {
+        opacity: 0.5 !important; cursor: default !important; pointer-events: none !important;
+        background: var(--color-surface-muted, #2a2a2a) !important;
+        border-color: var(--color-border, #444) !important;
+        box-shadow: none !important;
+        color: var(--color-text-secondary, #888) !important;
+      }
       .btn-primary { background: var(--color-accent, #1abc9c); color: white; }
       .btn-primary:hover { opacity: 0.9; }
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
@@ -410,7 +447,6 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         box-shadow: 0 0 10px 1px rgba(220,53,69,0.55) !important;
       }
       .btn-glow-red:hover:not(:disabled) { background: #712530 !important; }
-      .btn-glow-red:disabled { box-shadow: none !important; }
       .btn-badge-orange {
         background: rgba(249,115,22,0.2) !important; color: #f97316 !important; border: 1px solid #f97316 !important;
         box-shadow: 0 0 10px 1px rgba(249,115,22,0.55) !important;

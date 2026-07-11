@@ -1,3 +1,8 @@
+## v1.11.1 (EXPERIMENTAL - not a feature release)
+
+- **Testing whether Tools-menu registration is possible in this runtime**, ahead of building the Tool Wear Compensation reopen-anytime feature. Adds a throwaway "SW2026 Test Menu Item" entry to the Tools tab (if `pluginContext.registerToolMenu` exists here) that just opens a "It works!" dialog. Check the plugin log for `[SW2026 TEST]` lines either way - they'll say whether the API exists and whether the call succeeded. Also worth checking: load two or three different files and see if the Tools tab shows one "SW2026 Test Menu Item" entry or several duplicates, since this whole script re-runs on every file load.
+- This version has no other changes and isn't meant to be a real release - once we know the answer, this test code gets removed regardless of outcome.
+
 ## v1.11.0
 
 - **Fix: Tool Wear Compensation arrows were spread too far apart vertically.** The v1.10.4 glyph enlargement combined with the existing padding pushed the two arrows' combined natural height well past their container, forcing them apart. Reduced vertical padding sharply (kept horizontal padding, so touch width is unaffected) so they sit close together proportionally.
