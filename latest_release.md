@@ -1,3 +1,9 @@
+## v1.10.2
+
+- **Tool Wear Compensation stepper made touch-friendly.** The span-based fix in v1.10.1 got the visual size right, but the actual clickable area was still tiny (matching the small glyph exactly). Added generous invisible padding around each arrow (~30px tap target instead of ~14px) plus `touch-action: manipulation` to remove tap delay on touchscreens - the arrow glyphs themselves stay the same small size, only the tappable area grew.
+- **Slot number labels and "TLS" text shifted left** to stop crowding the magazine casing.
+- **"No Tool" replaced with "Empty"** on empty slot circles - a single word instead of two stacked lines, which also simplified centering it correctly. Circle shade darkened slightly.
+
 ## v1.10.1
 
 - **Fix: Tool Wear Compensation stepper still showed as large bordered buttons despite the CSS change in v1.10.0.** Found the actual cause: they were `<button>` elements, and ncSender apparently applies its own global styling to all buttons that our single-class CSS rule wasn't specific enough to override. Switched them from `<button>` to plain `<span>` elements (matching how the Slot dropdown's chevron is also just plain text, not a button) — this sidesteps any global button styling entirely, since spans aren't targeted by it. Added explicit keyboard support (Enter/Space) since spans don't get that automatically like buttons do.

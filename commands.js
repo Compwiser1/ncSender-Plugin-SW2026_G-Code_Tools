@@ -365,12 +365,15 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         border-radius: 5px; color: var(--color-text-primary, #e0e0e0);
         padding: 0 4px; height: 32px; box-sizing: border-box;
       }
-      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 32px; }
-      .wear-arrows { display: flex; flex-direction: column; justify-content: center; }
+      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 56px; }
+      .wear-arrows { display: flex; flex-direction: column; justify-content: center; height: 56px; }
       .wear-arrow {
-        display: inline-block; background: transparent; border: none; padding: 0; margin: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: transparent; border: none; margin: 0;
+        padding: 10px 10px; box-sizing: border-box;
         color: var(--color-text-secondary, #999);
         font-size: 0.85rem; line-height: 0.9; cursor: pointer; user-select: none;
+        touch-action: manipulation;
       }
       .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
       .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
@@ -567,7 +570,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const DIGIT_DY = Math.round(8 * SCALE);
           const KNOB_DY = Math.round(29 * SCALE);
           const TLS_DY = Math.round(33 * SCALE);
-          const DIGIT_X = Math.round(24 * SCALE);
+          const DIGIT_X = Math.round(16 * SCALE);
           const TOP_PAD = Math.max(4, Math.round(6 * SCALE)); // small fixed margin only, no header reserved anymore
 
           const n = Math.max(magazineSize, 1);
@@ -639,9 +642,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               digitColor = '#f2a623';
               digitFilter = ' filter="url(#glowAmber)"';
             } else {
-              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#8a8d91"/>' +
-                '<text x="' + cx + '" y="' + (cy + Math.round(-0.3 * NOTOOL_FS)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">No</text>' +
-                '<text x="' + cx + '" y="' + (cy + Math.round(0.8 * NOTOOL_FS)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">Tool</text>';
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#75787c"/>' +
+                '<text x="' + cx + '" y="' + (cy + Math.round(0.3 * NOTOOL_FS)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">Empty</text>';
             }
 
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
