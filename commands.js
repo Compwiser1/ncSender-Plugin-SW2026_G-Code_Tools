@@ -368,9 +368,9 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 32px; }
       .wear-arrows { display: flex; flex-direction: column; justify-content: center; }
       .wear-arrow {
-        background: transparent; border: none; padding: 0; margin: 0;
+        display: inline-block; background: transparent; border: none; padding: 0; margin: 0;
         color: var(--color-text-secondary, #999);
-        font-size: 0.85rem; line-height: 0.9; cursor: pointer;
+        font-size: 0.85rem; line-height: 0.9; cursor: pointer; user-select: none;
       }
       .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
       .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
@@ -549,10 +549,16 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const CAP_H = Math.round(53 * SCALE);
           const CAP_W = Math.round(88 * SCALE);
           const BOTTOM_PAD = Math.max(2, Math.round(3 * SCALE));
-          const SVG_W = Math.round(150 * SCALE);
+          const cx = Math.round(92 * SCALE); // shifted left from 98 to leave a right-side margin
+          // SVG_W is derived from cx+BULGE_R (not an independent number) plus
+          // a margin - previously it was set to exactly match the bulge's
+          // right edge with zero margin, which the outline filter's dilation
+          // then clipped, causing the right side to look cut off.
+          const RIGHT_MARGIN = Math.max(6, Math.round(8 * SCALE));
+          const SVG_W = cx + BULGE_R + RIGHT_MARGIN;
           const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
           const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
-          const NOTOOL_FS = Math.max(10, Math.round(14 * SCALE));
+          const NOTOOL_FS = Math.max(11, Math.round(20 * SCALE));
           const DIGIT_FS = Math.max(13, Math.round(26 * SCALE));
           const TLS_FS = DIGIT_FS;
           const KNOB_R = Math.max(8, Math.round(17 * SCALE));
@@ -572,7 +578,6 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const svgH = capBottom + BOTTOM_PAD;
           const knobCy = capTop + KNOB_DY;
           const tlsY = capTop + TLS_DY;
-          const cx = Math.round(98 * SCALE);
 
           // Only tools that are actually in the library and confirmed
           // in-sync or flagged conflict occupy a physical slot visually -
@@ -635,8 +640,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               digitFilter = ' filter="url(#glowAmber)"';
             } else {
               inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#8a8d91"/>' +
-                '<text x="' + cx + '" y="' + (cy - Math.round(6 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">No</text>' +
-                '<text x="' + cx + '" y="' + (cy + Math.round(8 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">Tool</text>';
+                '<text x="' + cx + '" y="' + (cy + Math.round(-0.3 * NOTOOL_FS)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">No</text>' +
+                '<text x="' + cx + '" y="' + (cy + Math.round(0.8 * NOTOOL_FS)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#0a0a0a">Tool</text>';
             }
 
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
@@ -705,8 +710,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               'title="Format: -1.00 to 1.00" ' +
               'data-tool-idx="' + idx + '">' +
               '<div class="wear-arrows">' +
-              '<button type="button" class="wear-arrow wear-arrow-up" data-tool-idx="' + idx + '" data-dir="1" aria-label="Increase by 0.01">&#9650;</button>' +
-              '<button type="button" class="wear-arrow wear-arrow-down" data-tool-idx="' + idx + '" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</button>' +
+              '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-tool-idx="' + idx + '" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
+              '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-tool-idx="' + idx + '" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
               '</div></div>';
 
             return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td><td class="col-wear">' + wearCell + '</td></tr>';
@@ -915,6 +920,12 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             input.value = Math.max(-1, Math.min(1, raw)).toFixed(2);
           }
           updateWearInputColor(input);
+        });
+
+        document.getElementById('toolsTableBody').addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          const arrow = e.target.closest('.wear-arrow');
+          if (arrow) { e.preventDefault(); arrow.click(); }
         });
 
         overlay.addEventListener('click', closeSlotSelector);

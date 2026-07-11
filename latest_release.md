@@ -1,3 +1,9 @@
+## v1.10.1
+
+- **Fix: Tool Wear Compensation stepper still showed as large bordered buttons despite the CSS change in v1.10.0.** Found the actual cause: they were `<button>` elements, and ncSender apparently applies its own global styling to all buttons that our single-class CSS rule wasn't specific enough to override. Switched them from `<button>` to plain `<span>` elements (matching how the Slot dropdown's chevron is also just plain text, not a button) — this sidesteps any global button styling entirely, since spans aren't targeted by it. Added explicit keyboard support (Enter/Space) since spans don't get that automatically like buttons do.
+- **"No Tool" text enlarged again and properly recentered** — recalculated the two-line vertical position using the same font-metric-based approach that fixed an earlier header-clipping issue, rather than a guessed offset.
+- **Fixed the magazine graphic's right-edge clipping.** Found the actual cause: the casing's right edge was calculated to land at *exactly* the SVG canvas width with zero margin, so the outline filter's dilation had nowhere to go but past the edge, getting clipped. Shifted the graphic slightly left and derived the canvas width from the actual geometry plus a real margin, instead of an independent fixed number that happened to leave no room.
+
 ## v1.10.0
 
 - **Slot dropdown popup enlarged** so all 8 (or however many) options are visible without scrolling.
