@@ -417,7 +417,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin-left: 0;
         text-align: center;
       }
-      .stat-dot { font-size: 0.9rem; vertical-align: 1px; }
+      .stat-dot { font-size: 1.1rem; vertical-align: -1px; }
       .sw-section-badge-slot {
         display: inline-flex; justify-content: flex-end;
         min-width: 200px; flex-shrink: 0;
@@ -430,9 +430,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         transition: transform 0.18s ease;
         touch-action: manipulation;
       }
-      .sw-section-icon { font-size: 1.05rem; line-height: 1; }
+      .sw-section-icon { font-size: 1.4rem; line-height: 1; display: inline-flex; align-items: center; }
       .sw-section-badge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
-      .sw-badge-icon { font-size: 0.9em; line-height: 1; }
+      .sw-badge-icon { font-size: 1.25em; line-height: 1; display: inline-flex; align-items: center; }
       .sw-section-body { padding: 4px 16px 16px; }
       .sw-section-actions {
         display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;
@@ -440,9 +440,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .sw-section-actions .btn { flex: 1 1 200px; }
 
       .btn-life {
-        display: block; width: 100%; padding: 14px; font-size: 1rem;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 14px; font-size: 1rem;
         letter-spacing: 0.02em; margin-top: 4px;
       }
+      .btn-life-icon { font-size: 1.3em; line-height: 1; display: inline-flex; align-items: center; }
       .btn-life:not(:disabled) {
         background: #163a4d !important; color: #eaf6ff !important;
         border: 1px solid #3d8fc4 !important;
@@ -639,23 +641,23 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             <thead>
               <tr>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
-                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation Description</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
-                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
-                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Offset</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X &amp; Y Offset</th>
               </tr>
             </thead>
             <tbody id="wcTableBody"></tbody>
           </table>
           <div class="sw-section-actions">
-            <button id="applySafetyBtn" type="button" class="btn" disabled>Apply My Safety Net</button>
+            <button id="applySafetyBtn" type="button" class="btn" disabled>Apply Offset</button>
             <button id="livingEdgeBtn" type="button" class="btn btn-glow-red">Live On The Edge</button>
           </div>
         </div>
       </div>
 
-      <button id="lifeBtn" type="button" class="btn btn-life" disabled>&#9889; Bring This G-Code To Life!</button>
+      <button id="lifeBtn" type="button" class="btn btn-life" disabled><span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!</button>
     </div>
 
     <div id="slotSelectorOverlay" class="slot-selector-overlay">
@@ -1347,7 +1349,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }).join('');
         }
 
-        // === Apply My Safety Net stays grayed out until at least one Z/X&Y
+        // === Apply Offset stays grayed out until at least one Z/X&Y
         // value is non-zero, then lights up green (item 3). ===
         function updateApplySafetyBtnState() {
           const btn = document.getElementById('applySafetyBtn');
@@ -1559,7 +1561,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'life' } }, '*');
           } catch (err) {
             btn.disabled = false;
-            btn.textContent = '\\u26A1 Bring This G-Code To Life!';
+            btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';
             alert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
           }
         });

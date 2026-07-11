@@ -1,3 +1,9 @@
+## v1.13.13 (EXPERIMENTAL — bigger/aligned icons, offset terminology)
+
+- **All icons throughout the plugin are larger and vertically centered against their text**: section icons (🧰/🛡️), status badge icons, the stat-summary bullet dots, and the lightning bolt on "Bring This G-Code To Life!" (now its own aligned element instead of plain inline text).
+- **Operation Manager table headers renamed**: "Operation" → "Operation Description", "Z Comp" → "Z Offset", "X&Y Comp" → "X & Y Offset".
+- **"Apply My Safety Net" renamed to "Apply Offset"** to match the new offset terminology. (The section's "Safety Net Applied" status badge wording is unchanged, since that wasn't part of this request.)
+
 ## v1.13.12 (EXPERIMENTAL — button gating, stat sizing/alignment/bold totals)
 
 - **"Organize My Tools" now grays out once Tool Manager's status reads "Tools Organized"**, so the button visibly reflects that the action already ran. It re-enables automatically if the section returns to "In progress...".
