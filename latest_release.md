@@ -1,3 +1,11 @@
+## v1.9.2
+
+- **Casing/empty-slot colors swapped** — the casing is now black, empty slot circles are gray (previously reversed).
+- **Added a light gray outline around the magazine's outer silhouette only** — traces just the true external boundary of the whole scalloped shape, not each individual circle (which is what caused the crescent artifacts fixed in v1.9.1). Built with an SVG `feMorphology` dilate + XOR technique operating on the group as a whole, rather than per-circle strokes.
+- **Empty slots now show "No Tool"** (two lines: "No" / "Tool") instead of a dash.
+- **Tool Wear Compensation stepper now sized identically to the Slot dropdown** — both given the same explicit 32px height so they match exactly regardless of content.
+- **"Add & Assign" glow no longer disappears when disabled** — it dims along with the rest of the button instead of losing its glow entirely.
+
 ## v1.9.1
 
 - **Fix: crescent-shaped light gray artifacts at every slot overlap.** The visible edge stroke added in v1.9.0 (to fix casing edge visibility against the background) had an unintended side effect: since the casing is built from overlapping circles, each circle's own stroke crossed through its neighbor's fill at the overlap boundary, creating lens-shaped crescent lines exactly where two slots meet. Removed the stroke entirely - the solid `#2c2e30` fill already has enough contrast against the app's background on its own, so no stroke is needed.

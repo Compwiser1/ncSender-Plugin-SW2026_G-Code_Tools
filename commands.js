@@ -363,17 +363,18 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         background: var(--color-surface, #0e1113);
         border: 1px solid var(--color-border, #444);
         border-radius: 5px 0 0 5px; color: var(--color-text-primary, #e0e0e0);
-        padding: 3px 4px;
+        padding: 0 4px; height: 32px; box-sizing: border-box;
       }
-      .wear-stepper { display: inline-flex; align-items: center; vertical-align: middle; }
-      .wear-arrows { display: flex; flex-direction: column; height: 28px; }
+      .wear-stepper { display: inline-flex; align-items: center; vertical-align: middle; height: 32px; }
+      .wear-arrows { display: flex; flex-direction: column; height: 32px; }
       .wear-arrow {
-        width: 18px; height: 14px; flex: none;
+        width: 18px; height: 16px; flex: none;
         background: var(--color-surface-muted, #1a1a1a);
         border: 1px solid var(--color-border, #444);
         border-left: none;
         color: var(--color-text-secondary, #999);
         font-size: 8px; line-height: 1; cursor: pointer; padding: 0;
+        box-sizing: border-box;
       }
       .wear-arrow-up { border-radius: 0 5px 0 0; border-bottom: none; }
       .wear-arrow-down { border-radius: 0 0 5px 0; }
@@ -406,7 +407,6 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
       }
       .btn-glow-green:hover:not(:disabled) { background: #216339; }
-      .btn-glow-green:disabled { box-shadow: none; }
       .btn-glow-red {
         background: #5a1a22; color: #ffffff; border: 1px solid #dc3545;
         box-shadow: 0 0 10px 1px rgba(220,53,69,0.55);
@@ -418,7 +418,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         display: inline-flex; align-items: center; gap: 5px;
         background: var(--color-surface, #0e1113);
         border: 1px solid var(--color-border, #444);
-        border-radius: 5px; padding: 3px 8px 3px 10px;
+        border-radius: 5px; padding: 0 8px 0 10px;
+        height: 32px; box-sizing: border-box;
       }
       .slot-cell::after {
         content: '\\25BE';
@@ -551,13 +552,12 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const SVG_W = Math.round(150 * SCALE);
           const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
           const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
-          const DASH_FS = Math.max(10, Math.round(18 * SCALE));
+          const NOTOOL_FS = Math.max(8, Math.round(11 * SCALE));
           const DIGIT_FS = Math.max(13, Math.round(26 * SCALE));
           const TLS_FS = DIGIT_FS;
           const KNOB_R = Math.max(8, Math.round(17 * SCALE));
           const LABEL_DY = Math.round(-5 * SCALE);
           const NUMBER_DY = Math.round(19 * SCALE);
-          const DASH_DY = Math.round(8 * SCALE);
           const DIGIT_DY = Math.round(8 * SCALE);
           const KNOB_DY = Math.round(29 * SCALE);
           const TLS_DY = Math.round(33 * SCALE);
@@ -598,6 +598,13 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             '<feComposite in="color" in2="blur" operator="in" result="glow"/>' +
             '<feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>' +
             '</filter>' +
+            '<filter id="outerOutline" x="-15%" y="-15%" width="130%" height="130%">' +
+            '<feMorphology in="SourceAlpha" operator="dilate" radius="1.5" result="dilated"/>' +
+            '<feFlood flood-color="#9a9da1" flood-opacity="1" result="borderColor"/>' +
+            '<feComposite in="borderColor" in2="dilated" operator="in" result="borderShape"/>' +
+            '<feComposite in="borderShape" in2="SourceAlpha" operator="out" result="borderOnly"/>' +
+            '<feMerge><feMergeNode in="borderOnly"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+            '</filter>' +
             '</defs>';
 
           let bulges = '';
@@ -607,7 +614,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           for (let i = 1; i <= n; i++) {
             const cy = topCy + (n - i) * PITCH; // slot n at top, slot 1 at bottom
-            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#2c2e30"/>';
+            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#0e1113"/>';
             // No bezel ring - it read as an unwanted visible internal line between the casing and the tool circle.
 
             const occ = bySlot[i];
@@ -627,19 +634,20 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               digitColor = '#f2a623';
               digitFilter = ' filter="url(#glowAmber)"';
             } else {
-              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#0e1113"/>' +
-                '<text x="' + cx + '" y="' + (cy + DASH_DY) + '" text-anchor="middle" font-size="' + DASH_FS + '" fill="#5a5f66">&#8212;</text>';
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#2c2e30"/>' +
+                '<text x="' + cx + '" y="' + (cy - Math.round(6 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#5a5f66">No</text>' +
+                '<text x="' + cx + '" y="' + (cy + Math.round(8 * SCALE)) + '" text-anchor="middle" font-size="' + NOTOOL_FS + '" fill="#5a5f66">Tool</text>';
             }
 
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
           }
 
-          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#2c2e30"/>' +
-            '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
+          const capRect = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#0e1113"/>';
+          const capExtras = '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
             '<text x="' + DIGIT_X + '" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
           carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
-            defs + bulges + bezels + cap + inner + digits + '</svg>';
+            defs + '<g filter="url(#outerOutline)">' + bulges + capRect + '</g>' + capExtras + bezels + inner + digits + '</svg>';
 
           const tableContainer = document.getElementById('toolsTableContainer');
           if (tableContainer) tableContainer.style.height = svgH + 'px';
