@@ -408,11 +408,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         padding: 12px 16px; cursor: pointer; user-select: none;
       }
       .sw-section-header:hover { background: var(--color-border, #232323); }
+      .sw-section-title-block { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
       .sw-section-title {
         display: flex; align-items: center; gap: 10px;
         font-size: 1.02rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.02em;
       }
+      .sw-section-stats {
+        font-size: 0.78rem; font-weight: 400; font-style: normal;
+        text-transform: none; letter-spacing: normal;
+        color: var(--color-text-secondary, #999);
+        margin-left: 60px;
+        white-space: nowrap;
+      }
+      .stat-dot { font-size: 0.7rem; vertical-align: 1px; }
       .sw-chevron {
         display: inline-flex; align-items: center; justify-content: center;
         font-size: 1.5rem; line-height: 0.9;
@@ -575,10 +584,13 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       <div class="sw-section" id="toolSection">
         <div class="sw-section-header" id="toolSectionHeader">
-          <div class="sw-section-title">
-            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
-            <span class="sw-section-icon">&#129520;</span>
-            <span>Tool Manager</span>
+          <div class="sw-section-title-block">
+            <div class="sw-section-title">
+              <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+              <span class="sw-section-icon">&#129520;</span>
+              <span>Tool Manager</span>
+            </div>
+            <div class="sw-section-stats" id="toolSectionStats"></div>
           </div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
@@ -616,10 +628,13 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       <div class="sw-section" id="opSection">
         <div class="sw-section-header" id="opSectionHeader">
-          <div class="sw-section-title">
-            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
-            <span class="sw-section-icon">&#128737;&#65039;</span>
-            <span>Operation Manager</span>
+          <div class="sw-section-title-block">
+            <div class="sw-section-title">
+              <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+              <span class="sw-section-icon">&#128737;&#65039;</span>
+              <span>Operation Manager</span>
+            </div>
+            <div class="sw-section-stats" id="opSectionStats"></div>
           </div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
@@ -881,6 +896,44 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return rows.find(function(r) { return r.toolNumber === toolNumber; });
         }
 
+        // === Header summary stats ===
+
+        function updateToolSectionStats() {
+          const total = rows.length;
+          const inSync = rows.filter(function(r) { return r.action === 'match'; }).length;
+          const newCount = rows.filter(function(r) { return r.action === 'add'; }).length;
+          const conflicts = rows.filter(function(r) { return r.action === 'conflict'; }).length;
+
+          const el = document.getElementById('toolSectionStats');
+          el.innerHTML = total + ' tool' + (total === 1 ? '' : 's') +
+            ' &middot; <span class="stat-dot" style="color:#28a745;">&#9679;</span> ' + inSync + ' In Sync' +
+            ' &middot; <span class="stat-dot" style="color:#f97316;">&#9679;</span> ' + newCount + ' New' +
+            ' &middot; <span class="stat-dot" style="color:#dc3545;">&#9679;</span> ' + conflicts + ' Conflict' + (conflicts === 1 ? '' : 's');
+        }
+
+        function updateOpSectionStats() {
+          const total = wearCompOperations.length;
+
+          const toolSet = {};
+          wearCompOperations.forEach(function(op) {
+            if (op.toolNumber !== null && op.toolNumber !== undefined) toolSet[op.toolNumber] = true;
+          });
+          const toolCount = Object.keys(toolSet).length;
+
+          const coveredOps = {};
+          document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+            const idx = input.getAttribute('data-op-idx');
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val !== 0) coveredOps[idx] = true;
+          });
+          const coverage = Object.keys(coveredOps).length;
+
+          const el = document.getElementById('opSectionStats');
+          el.innerHTML = total + ' operation' + (total === 1 ? '' : 's') +
+            ' &middot; ' + coverage + ' of ' + total + ' set' +
+            ' &middot; spans ' + toolCount + ' tool' + (toolCount === 1 ? '' : 's');
+        }
+
         function renderTable() {
           const tbody = document.getElementById('toolsTableBody');
           tbody.innerHTML = rows.map(function(r, idx) {
@@ -1034,6 +1087,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
             renderCarousel();
             renderTable();
+            updateToolSectionStats();
           } catch (e) {
             // ignore refresh failures - user can retry
           }
@@ -1309,6 +1363,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           input.value = next.toFixed(2);
           updateWearInputColor(input);
           updateApplySafetyBtnState();
+          updateOpSectionStats();
         });
 
         document.getElementById('wcTableBody').addEventListener('input', function(e) {
@@ -1320,6 +1375,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }
           updateWearInputColor(input);
           updateApplySafetyBtnState();
+          updateOpSectionStats();
         });
 
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
@@ -1503,6 +1559,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         renderTable();
         renderWearCompTable();
         updateApplySafetyBtnState();
+        updateToolSectionStats();
+        updateOpSectionStats();
         if (currentStatus().allReady) {
           setToolSectionState('ready');
         }

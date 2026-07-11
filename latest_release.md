@@ -1,3 +1,9 @@
+## v1.13.4 (EXPERIMENTAL — header summary stats)
+
+- **TOOL MANAGER header now shows a stats line**: total tool count plus a color-coded status breakdown - 🟢 In Sync, 🟠 New, 🔴 Conflict - using the same colors as each row's status badge, so you can tell whether Organize My Tools has real work to do without expanding the section.
+- **OPERATION MANAGER header now shows a stats line**: total operation count, how many currently have a non-zero compensation value set ("N of M set"), and how many distinct tools are used across all operations. The coverage count updates live as you type or use the stepper arrows.
+- Both stats lines sit under the section title, update automatically after any tool-library change (Organize My Tools, manual slot assignment, conflict resolution), and don't require expanding the section to see.
+
 ## v1.13.3 (EXPERIMENTAL — naming + operation notes)
 
 - **Dialog title changed** from "SolidWorks 2026 G-Code Tools" to **"SolidWorks G-Code Manager"**.
