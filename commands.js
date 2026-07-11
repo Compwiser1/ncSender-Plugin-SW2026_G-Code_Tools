@@ -341,23 +341,20 @@ function parseOperations(content) {
 
 // === Unified dialog: sync + slot mapping + translation ===
 
+// === Unified dialog: Tool Management + Operation Management (EXPERIMENTAL layout) ===
+//
+// v1.13.0-experimental restructures the single flat dialog into two
+// independently collapsible sections, each gated behind its own pair of
+// buttons - one "do the work" button and one "skip this" button. Neither
+// section's G-code transform (slot translation / wear compensation)
+// actually runs until the user presses the combined "Bring This G-Code
+// To Life!" button at the bottom, which stays disabled until BOTH
+// sections have moved off their default "In progress..." state. This is
+// a first draft for live testing in the real app - expect follow-up
+// tweaks once real screenshots come back.
+
 function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary) {
   const wearCompOperations = parseOperations(content);
-  const statusConfig = {
-    red: {
-      color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
-      title: 'Tool Library Conflicts Found'
-    },
-    yellow: {
-      color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.1)', icon: '🟡',
-      title: 'Tools Need Attention'
-    },
-    green: {
-      color: '#28a745', bgColor: 'rgba(40, 167, 69, 0.1)', icon: '🟢',
-      title: 'All Tools Ready'
-    }
-  };
-  const config = statusConfig[status];
 
   const dialogToolLibrary = {};
   Object.keys(toolLibrary).forEach(function(key) {
@@ -377,7 +374,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       }
       .sw-header {
         display: flex; align-items: center; justify-content: space-between;
-        flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+        flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
       }
       .sw-progname-block { text-align: left; flex: 1 1 auto; min-width: 0; }
       .sw-progname-label {
@@ -385,16 +382,57 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         color: var(--color-text-primary, #e0e0e0);
       }
       .sw-filename { color: var(--color-text-secondary, #ccc); font-size: 0.9rem; word-break: break-all; }
-      .sw-banner {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 6px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;
-        background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
-        flex-shrink: 0;
+
+      .sw-section {
+        border: 1px solid var(--color-border, #3a3f45);
+        border-radius: 8px;
+        background: var(--color-surface-muted, #1a1a1a);
+        margin-bottom: 14px;
+        overflow: hidden;
       }
+      .sw-section-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 16px; cursor: pointer; user-select: none;
+      }
+      .sw-section-header:hover { background: var(--color-border, #232323); }
+      .sw-section-title {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 1.02rem; font-weight: 700;
+      }
+      .sw-chevron {
+        display: inline-block; font-size: 0.8rem;
+        color: var(--color-text-secondary, #999);
+        transition: transform 0.18s ease;
+      }
+      .sw-section-icon { font-size: 1.05rem; line-height: 1; }
+      .sw-section-badge { display: inline-flex; align-items: center; gap: 6px; }
+      .sw-badge-icon { font-size: 0.9em; line-height: 1; }
+      .sw-section-body { padding: 4px 16px 16px; }
+      .sw-section-actions {
+        display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;
+      }
+      .sw-section-actions .btn { flex: 1 1 200px; }
+
+      .btn-life {
+        display: block; width: 100%; padding: 14px; font-size: 1rem;
+        letter-spacing: 0.02em; margin-top: 4px;
+      }
+      .btn-life:not(:disabled) {
+        background: #163a4d !important; color: #eaf6ff !important;
+        border: 1px solid #3d8fc4 !important;
+        box-shadow: 0 0 10px 1px rgba(61,143,196,0.5) !important;
+      }
+      .btn-life:not(:disabled):hover { background: #1c4a63 !important; }
+      .btn-skip {
+        background: transparent !important; color: var(--color-text-secondary, #ccc) !important;
+        border: 1px solid var(--color-border, #555) !important;
+      }
+      .btn-skip:hover:not(:disabled) { background: var(--color-border, #2a2a2a) !important; }
+
       .sw-main {
         display: flex; gap: 0; align-items: stretch;
-        background: var(--color-surface-muted, #1a1a1a);
-        border-radius: 8px; padding: 8px; margin-bottom: 10px; overflow: hidden;
+        background: var(--color-surface, #101214);
+        border-radius: 8px; padding: 8px; overflow: hidden;
       }
       .tools-table-container {
         flex: 1 1 auto; min-width: 0;
@@ -424,8 +462,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .col-status { text-align: center; }
       .col-slot { text-align: center; }
       .tools-table td.col-slot { font-size: 1.2rem; }
-      .col-wear { text-align: center; }
-      .tools-table th.col-toolnum, .tools-table th.col-status, .tools-table th.col-slot, .tools-table th.col-wear { text-align: center; }
+      .tools-table th.col-toolnum, .tools-table th.col-status, .tools-table th.col-slot { text-align: center; }
+
       .wear-input {
         width: 4.5em; text-align: center; font-size: 1.2rem;
         background: var(--color-surface, #0e1113);
@@ -446,6 +484,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
       .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
       .wear-input::placeholder { color: #75787c; }
+
       .gcode-cell { overflow: hidden; }
       .gcode-cell .gc-type { font-weight: 700; }
       .gcode-cell .gc-detail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; font-style: italic; font-size: 0.85em; }
@@ -462,6 +501,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
       .conflict-diff .lib-val { color: #f59e0b; }
       .conflict-diff .gcode-val { color: #1abc9c; }
+
       .btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
       .btn:disabled {
         opacity: 0.5 !important; cursor: default !important; pointer-events: none !important;
@@ -470,25 +510,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         box-shadow: none !important;
         color: var(--color-text-secondary, #888) !important;
       }
-      .btn-primary { background: var(--color-accent, #1abc9c); color: white; }
-      .btn-primary:hover { opacity: 0.9; }
-      .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
-      .btn-secondary:hover { background: var(--color-border, #444); }
       .btn-glow-green {
         background: #1a4d2e !important; color: #ffffff !important; border: 1px solid #28a745 !important;
         box-shadow: 0 0 10px 1px rgba(40,167,69,0.55) !important;
       }
       .btn-glow-green:hover:not(:disabled) { background: #216339 !important; }
-      .btn-glow-red {
-        background: #5a1a22 !important; color: #ffffff !important; border: 1px solid #dc3545 !important;
-        box-shadow: 0 0 10px 1px rgba(220,53,69,0.55) !important;
-      }
-      .btn-glow-red:hover:not(:disabled) { background: #712530 !important; }
-      .btn-badge-orange {
-        background: rgba(249,115,22,0.2) !important; color: #f97316 !important; border: 1px solid #f97316 !important;
-        box-shadow: 0 0 10px 1px rgba(249,115,22,0.55) !important;
-      }
-      .btn-badge-orange:hover:not(:disabled) { background: rgba(249,115,22,0.32) !important; }
+
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
         display: inline-flex; align-items: center; gap: 5px;
@@ -503,7 +530,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       }
       .slot-cell:hover { border-color: var(--color-accent, #1abc9c); background: var(--color-surface-muted, #1a1a1a); }
       .slot-cell-placeholder { color: #f59e0b; font-weight: 600; cursor: pointer; }
-      .actions { display: flex; gap: 18px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
       .slot-selector-overlay.show { display: block; }
       .slot-selector-popup {
@@ -526,62 +553,81 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         <div class="sw-progname-block">
           <span class="sw-progname-label">Program Name: </span><span class="sw-filename">${filename || 'G-Code File'}</span>
         </div>
-        <div class="sw-banner" id="swBanner">
-          <span id="swIcon">${config.icon}</span>
-          <span id="swTitle">${config.title}</span>
+      </div>
+
+      <div class="sw-section" id="toolSection">
+        <div class="sw-section-header" id="toolSectionHeader">
+          <div class="sw-section-title">
+            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+            <span class="sw-section-icon">&#129520;</span>
+            <span>Tool management</span>
+          </div>
+          <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
+            <span class="sw-badge-icon">&#8987;</span>In progress...
+          </span>
+        </div>
+        <div class="sw-section-body" id="toolSectionBody" style="display:none;">
+          <div class="sw-main">
+            <div class="tools-table-container" id="toolsTableContainer">
+              <table class="tools-table">
+                <colgroup>
+                  <col style="width: 10%;">
+                  <col style="width: 33%;">
+                  <col style="width: 30%;">
+                  <col style="width: 27%;">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th class="col-toolnum">Tool #</th>
+                    <th>Program Tool Information</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-slot">Slot</th>
+                  </tr>
+                </thead>
+                <tbody id="toolsTableBody"></tbody>
+              </table>
+            </div>
+            <div id="slotCarousel"></div>
+          </div>
+          <div class="sw-section-actions">
+            <button id="organizeBtn" type="button" class="btn btn-glow-green">Organize My Tools</button>
+            <button id="skipToolsBtn" type="button" class="btn btn-skip">I Don't Need This</button>
+          </div>
         </div>
       </div>
 
-      <div class="sw-main">
-        <div class="tools-table-container" id="toolsTableContainer">
-          <table class="tools-table">
-            <colgroup>
-              <col style="width: 7%;">
-              <col style="width: 27%;">
-              <col style="width: 24%;">
-              <col style="width: 15%;">
-              <col style="width: 27%;">
-            </colgroup>
+      <div class="sw-section" id="opSection">
+        <div class="sw-section-header" id="opSectionHeader">
+          <div class="sw-section-title">
+            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+            <span class="sw-section-icon">&#128737;&#65039;</span>
+            <span>Operation management</span>
+          </div>
+          <span class="row-status-badge row-status-badge--orange sw-section-badge" id="opSectionBadge">
+            <span class="sw-badge-icon">&#8987;</span>In progress...
+          </span>
+        </div>
+        <div class="sw-section-body" id="opSectionBody" style="display:none;">
+          <table class="wc-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
             <thead>
               <tr>
-                <th class="col-toolnum">Tool #</th>
-                <th>Program Tool Information</th>
-                <th class="col-status">Status</th>
-                <th class="col-slot">Slot</th>
-                <th class="col-wear">Tool Wear Compensation</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
+                <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
               </tr>
             </thead>
-            <tbody id="toolsTableBody"></tbody>
+            <tbody id="wcTableBody"></tbody>
           </table>
-        </div>
-        <div id="slotCarousel"></div>
-      </div>
-
-      <div class="actions">
-        <button id="prepareBtn" class="btn btn-badge-orange" disabled>Add &amp; Assign</button>
-        <button id="mapBtn" class="btn btn-glow-green" disabled>Apply</button>
-        <button id="bypassBtn" class="btn btn-glow-red">Bypass</button>
-        <button id="wcToggleBtn" type="button" class="btn btn-secondary">Tool Wear Compensation</button>
-      </div>
-
-      <div id="wcPanel" style="display:none; margin-top:14px; border-top:1px solid var(--color-border, #3a3f45); padding-top:14px;">
-        <table class="wc-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-          <thead>
-            <tr>
-              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
-              <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
-              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
-              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
-              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
-            </tr>
-          </thead>
-          <tbody id="wcTableBody"></tbody>
-        </table>
-        <div class="actions" style="margin-top:12px;">
-          <button type="button" id="wcApplyBtn" class="btn btn-glow-green">Apply Wear Comp</button>
-          <button type="button" id="wcCancelBtn" class="btn btn-secondary">Close</button>
+          <div class="sw-section-actions">
+            <button id="applySafetyBtn" type="button" class="btn btn-glow-green">Apply My Safety Net</button>
+            <button id="livingEdgeBtn" type="button" class="btn btn-skip">Living On The Edge</button>
+          </div>
         </div>
       </div>
+
+      <button id="lifeBtn" type="button" class="btn btn-life" disabled>&#9889; Bring This G-Code To Life!</button>
     </div>
 
     <div id="slotSelectorOverlay" class="slot-selector-overlay">
@@ -601,6 +647,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         const wearCompOperations = ${JSON.stringify(wearCompOperations)};
         let magazineSize = 0;
         let currentSlotRow = null;
+        let toolSectionState = 'pending';
+        let opSectionState = 'pending';
+        let storedWearOffsets = {};
 
         const overlay = document.getElementById('slotSelectorOverlay');
         const popup = document.getElementById('slotSelectorPopup');
@@ -626,17 +675,61 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const hasAssignable = rows.some(function(r) { return r.action !== 'add' && r.slotStatus === 'unassigned'; });
           const hasPrepareWork = hasNew || hasAssignable || hasConflicts;
           const allReady = !hasConflicts && !hasNew && !hasUnassigned;
-          const status = hasConflicts ? 'red' : ((hasNew || hasUnassigned) ? 'yellow' : 'green');
-          return { status: status, allReady: allReady, hasNew: hasNew, hasAssignable: hasAssignable, hasPrepareWork: hasPrepareWork };
+          return { allReady: allReady, hasNew: hasNew, hasAssignable: hasAssignable, hasPrepareWork: hasPrepareWork };
         }
+
+        // === Section state / accordion machinery ===
+
+        const SECTION_BADGES = {
+          pending: { cls: 'orange', icon: '\\u23F3', label: 'In progress...' },
+          ready:   { cls: 'green',  icon: '\\u2705', label: 'Ready to go!' },
+          skipped: { cls: 'gray',   icon: '\\u23ED\\uFE0F', label: 'Skipped' }
+        };
+
+        function applySectionBadge(badgeId, state) {
+          const b = SECTION_BADGES[state];
+          const el = document.getElementById(badgeId);
+          el.className = 'row-status-badge row-status-badge--' + b.cls + ' sw-section-badge';
+          el.innerHTML = '<span class="sw-badge-icon">' + b.icon + '</span>' + b.label;
+        }
+
+        function setSectionCollapsed(bodyId, headerId, collapsed) {
+          document.getElementById(bodyId).style.display = collapsed ? 'none' : 'block';
+          const chevron = document.querySelector('#' + headerId + ' .sw-chevron');
+          if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
+
+        function updateLifeButton() {
+          document.getElementById('lifeBtn').disabled = (toolSectionState === 'pending' || opSectionState === 'pending');
+        }
+
+        function setToolSectionState(state) {
+          toolSectionState = state;
+          applySectionBadge('toolSectionBadge', state);
+          if (state !== 'pending') setSectionCollapsed('toolSectionBody', 'toolSectionHeader', true);
+          updateLifeButton();
+        }
+
+        function setOpSectionState(state) {
+          opSectionState = state;
+          applySectionBadge('opSectionBadge', state);
+          if (state !== 'pending') setSectionCollapsed('opSectionBody', 'opSectionHeader', true);
+          updateLifeButton();
+        }
+
+        function wireAccordionHeader(headerId, bodyId) {
+          document.getElementById(headerId).addEventListener('click', function() {
+            const body = document.getElementById(bodyId);
+            const isOpen = body.style.display !== 'none';
+            setSectionCollapsed(bodyId, headerId, isOpen);
+          });
+        }
+        wireAccordionHeader('toolSectionHeader', 'toolSectionBody');
+        wireAccordionHeader('opSectionHeader', 'opSectionBody');
 
         function renderCarousel() {
           // Locked visual proportions from the approved design, all scaled
-          // by SCALE. The original design (SCALE=1) rendered ~712px tall
-          // for 8 slots, which turned out to be far too tall for ncSender's
-          // actual dialog viewport - it pushed the action buttons off
-          // screen and forced the whole dialog to scroll as one unit.
-          // Adjust SCALE alone to resize everything proportionally.
+          // by SCALE. Adjust SCALE alone to resize everything proportionally.
           const SCALE = 0.82;
           const PITCH = Math.round(80 * SCALE);
           const FIRST_CY = Math.round(54 * SCALE);
@@ -646,11 +739,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const CAP_H = Math.round(53 * SCALE);
           const CAP_W = Math.round(88 * SCALE);
           const BOTTOM_PAD = Math.max(2, Math.round(3 * SCALE));
-          const cx = Math.round(92 * SCALE); // shifted left from 98 to leave a right-side margin
-          // SVG_W is derived from cx+BULGE_R (not an independent number) plus
-          // a margin - previously it was set to exactly match the bulge's
-          // right edge with zero margin, which the outline filter's dilation
-          // then clipped, causing the right side to look cut off.
+          const cx = Math.round(92 * SCALE);
           const RIGHT_MARGIN = Math.max(6, Math.round(8 * SCALE));
           const SVG_W = cx + BULGE_R + RIGHT_MARGIN;
           const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
@@ -665,7 +754,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const KNOB_DY = Math.round(29 * SCALE);
           const TLS_DY = Math.round(33 * SCALE);
           const DIGIT_X = Math.round(16 * SCALE);
-          const TOP_PAD = Math.max(4, Math.round(6 * SCALE)); // small fixed margin only, no header reserved anymore
+          const TOP_PAD = Math.max(4, Math.round(6 * SCALE));
 
           const n = Math.max(magazineSize, 1);
           const lastCy = TOP_PAD + FIRST_CY + (n - 1) * PITCH;
@@ -676,10 +765,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const knobCy = capTop + KNOB_DY;
           const tlsY = capTop + TLS_DY;
 
-          // Only tools that are actually in the library and confirmed
-          // in-sync or flagged conflict occupy a physical slot visually -
-          // "New" tools (not yet added) never appear here, since they
-          // can't really be in a magazine slot yet.
           const bySlot = {};
           rows.forEach(function(r) {
             if (r.action === 'add') return;
@@ -710,14 +795,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             '</defs>';
 
           let bulges = '';
-          let bezels = '';
           let inner = '';
           let digits = '';
 
           for (let i = 1; i <= n; i++) {
-            const cy = topCy + (n - i) * PITCH; // slot n at top, slot 1 at bottom
+            const cy = topCy + (n - i) * PITCH;
             bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#0e1113"/>';
-            // No bezel ring - it read as an unwanted visible internal line between the casing and the tool circle.
 
             const occ = bySlot[i];
             let digitColor = '#e8e8e6';
@@ -748,14 +831,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             '<text x="4" y="' + tlsY + '" text-anchor="start" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
           carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
-            defs + '<g filter="url(#outerOutline)">' + bulges + capRect + '</g>' + capExtras + bezels + inner + digits + '</svg>';
+            defs + '<g filter="url(#outerOutline)">' + bulges + capRect + '</g>' + capExtras + inner + digits + '</svg>';
 
           const tableContainer = document.getElementById('toolsTableContainer');
           if (tableContainer) tableContainer.style.height = svgH + 'px';
         }
 
         function titleCase(s) {
-          return String(s || '').toLowerCase().replace(/(^|[\s-])([a-z])/g, function(m, sep, ch) {
+          return String(s || '').toLowerCase().replace(/(^|[\\s-])([a-z])/g, function(m, sep, ch) {
             return sep + ch.toUpperCase();
           });
         }
@@ -769,25 +852,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               ? mappedTitled
               : mappedTitled + ' ' + rawTitled;
             const gcodeCell = '<span class="gc-type">' + escapeHtml(combinedType) + '</span>' +
-              '<span class="gc-detail">' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</span>';
+              '<span class="gc-detail">' + r.diameter.toFixed(2) + ' mm \\u2014 ' + escapeHtml(r.description) + '</span>';
 
             let syncCell = '<span class="row-status-badge row-status-badge--' + r.statusClass + '">' +
               escapeHtml(r.statusLabel) + '</span>';
 
             if (r.action === 'conflict') {
-              // No user choice here - conflicts are always auto-resolved
-              // using the G-code's values when "Add Tools & Auto-Assign
-              // Slots" runs. This is purely informational so the user can
-              // see what's about to change.
               const diff = '<div class="conflict-diff">' +
-                '<div class="lib-val">Library: ' + escapeHtml(r.libType) + ' — ' +
-                  (r.libDiameter !== null ? r.libDiameter.toFixed(2) : '?') + ' mm — ' + escapeHtml(r.libDescription) + '</div>' +
-                '<div class="gcode-val">Will use: ' + escapeHtml(r.mappedType) + ' — ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</div>' +
+                '<div class="lib-val">Library: ' + escapeHtml(r.libType) + ' \\u2014 ' +
+                  (r.libDiameter !== null ? r.libDiameter.toFixed(2) : '?') + ' mm \\u2014 ' + escapeHtml(r.libDescription) + '</div>' +
+                '<div class="gcode-val">Will use: ' + escapeHtml(r.mappedType) + ' \\u2014 ' + r.diameter.toFixed(2) + ' mm \\u2014 ' + escapeHtml(r.description) + '</div>' +
               '</div>';
-              // border-radius has no effect on <td> when the table uses
-              // border-collapse:collapse (which ours does, for the row/
-              // column dividers) - so the rounded/glowing border has to
-              // live on this inner wrapper div instead of the cell itself.
               syncCell = '<div class="status-conflict-wrap">' + syncCell + diff + '</div>';
             }
 
@@ -800,41 +875,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            const wearCell = '<div class="wear-stepper">' +
-              '<input type="text" class="wear-input" inputmode="decimal" ' +
-              'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" ' +
-              'title="Format: -1.00 to 1.00" ' +
-              'data-tool-idx="' + idx + '">' +
-              '<div class="wear-arrows">' +
-              '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-tool-idx="' + idx + '" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
-              '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-tool-idx="' + idx + '" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
-              '</div></div>';
-
-            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td><td class="col-wear">' + wearCell + '</td></tr>';
+            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
           }).join('');
         }
 
-        function updateBanner() {
-          const cfg = {
-            red: { color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found' },
-            yellow: { color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention' },
-            green: { color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready' }
-          };
-          const s = currentStatus();
-          const c = cfg[s.status];
-
-          const banner = document.getElementById('swBanner');
-          banner.style.background = c.bg;
-          banner.style.borderColor = c.color;
-          banner.style.color = c.color;
-          document.getElementById('swIcon').textContent = c.icon;
-          document.getElementById('swTitle').textContent = c.title;
-
-          document.getElementById('prepareBtn').disabled = !s.hasPrepareWork;
-          document.getElementById('mapBtn').disabled = !s.allReady;
-        }
-
-        // === Slot selector popup (adapted from Dynamic Tool Slot Mapper) ===
+        // === Slot selector popup ===
 
         function showSlotSelector(row, event) {
           currentSlotRow = row;
@@ -907,8 +952,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }
         }
 
-        // === Refresh library state from server after any change ===
-
         async function refreshFromServer() {
           try {
             const r = await fetch('/api/tools');
@@ -959,7 +1002,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
             renderCarousel();
             renderTable();
-            updateBanner();
           } catch (e) {
             // ignore refresh failures - user can retry
           }
@@ -978,50 +1020,13 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }
         }
 
-        // === Conflict resolution + slot cell clicks ===
-
         document.getElementById('toolsTableBody').addEventListener('click', function(e) {
           const slotCell = e.target.closest('.slot-cell');
           if (slotCell) {
             const idx = parseInt(slotCell.getAttribute('data-slot-idx'), 10);
             const row = rows[idx];
             if (row) showSlotSelector(row, e);
-            return;
           }
-
-          const arrow = e.target.closest('.wear-arrow');
-          if (arrow) {
-            const idx = arrow.getAttribute('data-tool-idx');
-            const dir = parseFloat(arrow.getAttribute('data-dir'));
-            const input = arrow.closest('.wear-stepper').querySelector('.wear-input');
-            const current = parseFloat(input.value);
-            const base = isNaN(current) ? 0 : current;
-            // Round through integer cents to avoid floating point artifacts
-            // (e.g. 0.1 + 0.01 = 0.10999999999999999 in raw JS math).
-            let next = Math.round((base * 100) + (dir * 1)) / 100;
-            next = Math.max(-1, Math.min(1, next));
-            input.value = next.toFixed(2);
-            updateWearInputColor(input);
-          }
-        });
-
-        document.getElementById('toolsTableBody').addEventListener('input', function(e) {
-          const input = e.target.closest('.wear-input');
-          if (!input) return;
-          // Manual typing bypasses the stepper's clamp - enforce the same
-          // +/-1.00 bound here so a typed "5.00" can't slip through, and
-          // keep the sign-based color in sync as the user types.
-          const raw = parseFloat(input.value);
-          if (!isNaN(raw) && (raw > 1 || raw < -1)) {
-            input.value = Math.max(-1, Math.min(1, raw)).toFixed(2);
-          }
-          updateWearInputColor(input);
-        });
-
-        document.getElementById('toolsTableBody').addEventListener('keydown', function(e) {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          const arrow = e.target.closest('.wear-arrow');
-          if (arrow) { e.preventDefault(); arrow.click(); }
         });
 
         overlay.addEventListener('click', closeSlotSelector);
@@ -1031,20 +1036,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           if (item) selectSlot(parseInt(item.getAttribute('data-slot'), 10));
         });
 
-        // === Add new tools to library ===
+        // === Tool Management: add / resolve / auto-assign, then Organize/Skip ===
 
-        // === Auto-Assign Slots ===
-        //
-        // Fills every tool that's in the library but has no magazine slot
-        // yet. If the magazine doesn't have enough empty slots, tools
-        // currently occupying a slot but NOT used anywhere in this G-code
-        // file are evicted (their slot cleared) to make room - tools that
-        // this file actually needs are never evicted. The user is shown a
-        // confirmation listing exactly what will be evicted before anything
-        // happens, since this reassigns physical ATC positions that may be
-        // in use by other jobs.
-
-        // === Step 1: Add every "New" tool to the library ===
         async function addNewToolsToLibrary() {
           const newRows = rows.filter(function(r) { return r.action === 'add'; });
           let failures = 0;
@@ -1072,11 +1065,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return { failures: failures, firstError: firstError };
         }
 
-        // === Step 2: Auto-resolve every conflict using the G-code's values ===
-        //
-        // No user choice here by design - conflicts always resolve to the
-        // G-code's type/diameter/description. The table still shows the
-        // library-vs-G-code diff for transparency before this runs.
         async function resolveConflictsWithGcode() {
           const conflictRows = rows.filter(function(r) { return r.action === 'conflict'; });
           let failures = 0;
@@ -1104,24 +1092,13 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return { failures: failures, firstError: firstError };
         }
 
-        // === Step 3: Auto-assign every library tool that still has no slot ===
-        //
-        // If the magazine doesn't have enough empty slots, tools currently
-        // occupying a slot but NOT used anywhere in this G-code file are
-        // evicted (their slot cleared, not deleted from the library) to make
-        // room - tools this file actually needs are never evicted. Shows a
-        // confirmation listing exactly what will be evicted before anything
-        // happens, since this reassigns physical ATC positions that may be
-        // in use by other jobs. Returns null if the user cancels at that
-        // confirmation (distinct from {failures: 0}, which means it ran
-        // cleanly with nothing to fix).
         async function autoAssignSlots() {
           const needed = rows.filter(function(r) { return r.action !== 'add' && r.slotStatus === 'unassigned'; });
           if (needed.length === 0) return { failures: 0, firstError: null };
 
           const usedInFile = new Set(rows.map(function(r) { return r.toolNumber; }));
 
-          const occupiedBy = {}; // slot -> library tool object
+          const occupiedBy = {};
           Object.values(toolLibrary).forEach(function(t) {
             if (t.toolNumber !== null && t.toolNumber !== undefined) {
               occupiedBy[t.toolNumber] = t;
@@ -1207,171 +1184,114 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return { failures: failures, firstError: firstError, ranOutOfSlots: ranOutOfSlots };
         }
 
-        // === Combined "Add Tools & Auto-Assign Slots" button ===
-        //
-        // Runs both steps back to back: add every new tool to the library,
-        // then auto-assign a slot to everything that still needs one
-        // (including the tools just added). After this runs, the table
-        // still reflects live state, so the user can manually tweak
-        // anything (resolve a conflict, reassign a specific slot) before
-        // clicking "Load".
-        document.getElementById('prepareBtn').addEventListener('click', async function() {
-          const prepareBtn = document.getElementById('prepareBtn');
-          prepareBtn.disabled = true;
-          prepareBtn.textContent = 'Adding tools…';
+        document.getElementById('organizeBtn').addEventListener('click', async function() {
+          const btn = this;
+          const skipBtn = document.getElementById('skipToolsBtn');
+          btn.disabled = true; skipBtn.disabled = true;
+          btn.textContent = 'Adding tools\\u2026';
 
           const addResult = await addNewToolsToLibrary();
           await refreshFromServer();
 
-          prepareBtn.textContent = 'Resolving conflicts…';
+          btn.textContent = 'Resolving conflicts\\u2026';
           const conflictResult = await resolveConflictsWithGcode();
           await refreshFromServer();
 
-          prepareBtn.textContent = 'Assigning slots…';
+          btn.textContent = 'Assigning slots\\u2026';
           const assignResult = await autoAssignSlots();
           await refreshFromServer();
 
-          prepareBtn.textContent = 'Add & Assign';
+          btn.textContent = 'Organize My Tools';
+          btn.disabled = false; skipBtn.disabled = false;
 
           const totalFailures = addResult.failures + conflictResult.failures + (assignResult ? assignResult.failures : 0);
           const firstError = addResult.firstError || conflictResult.firstError || (assignResult && assignResult.firstError);
 
           if (assignResult && assignResult.ranOutOfSlots) {
-            alert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually.');
+            alert('The magazine doesn\\'t have enough slots for every tool in this file, even after freeing unused slots. Assign the remaining tool(s) manually, then click Organize My Tools again.');
           } else if (totalFailures > 0) {
             alert(totalFailures + ' step(s) failed.' + (firstError ? '\\n\\nFirst error: ' + firstError : ' Check the ncSender log for details.'));
           }
-        });
 
-        // === Bypass ===
-
-        document.getElementById('bypassBtn').addEventListener('click', function() {
-          window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'bypass' } }, '*');
-        });
-
-        // === Load: browser-side G-code translation ===
-        //
-        // Bypasses Jint's 50 MB memory cap on large files by doing the
-        // regex translation in the browser instead of the plugin sandbox.
-        function performTranslationInBrowser(content, toolToSlot) {
-          return content.replace(/^[^\\n]*(?:M0*6|T\\d|H\\d)[^\\n]*$/gmi, function(line) {
-            if (!line) return line;
-            const trimmed = line.trim();
-            if (!trimmed) return line;
-            const firstChar = trimmed.charAt(0);
-
-            if (firstChar === '(' || firstChar === ';') {
-              const m = line.match(/T(\\d+)/i);
-              if (m) {
-                const toolNumber = parseInt(m[1], 10);
-                const pocket = toolToSlot[toolNumber];
-                if (pocket !== undefined) {
-                  return line.replace(/T(\\d+)/i, function(_, num) {
-                    return 'T' + pocket + ' [Original: tool ' + num + ']';
-                  });
-                }
-              }
-              return line;
-            }
-
-            let out = line;
-            const tm = line.match(/T(\\d+)/i);
-            if (tm) {
-              const toolNumber = parseInt(tm[1], 10);
-              const pocket = toolToSlot[toolNumber];
-              if (pocket !== undefined) out = out.replace(/T\\d+/i, 'T' + pocket);
-            }
-            const hm = out.match(/H(\\d+)/i);
-            if (hm) {
-              const heightNumber = parseInt(hm[1], 10);
-              const pocket = toolToSlot[heightNumber];
-              if (pocket !== undefined) out = out.replace(/H\\d+/i, 'H' + pocket);
-            }
-            return out;
-          });
-        }
-
-        document.getElementById('mapBtn').addEventListener('click', async function() {
-          const mapBtn = document.getElementById('mapBtn');
-          const prepareBtn = document.getElementById('prepareBtn');
-          const bypassBtn = document.getElementById('bypassBtn');
-          mapBtn.disabled = true; prepareBtn.disabled = true; bypassBtn.disabled = true;
-          mapBtn.textContent = 'Loading…';
-
-          try {
-            let content;
-            if (sourcePath) {
-              const r = await fetch('/api/gcode-files/file?path=' + encodeURIComponent(sourcePath));
-              if (!r.ok) throw new Error('Failed to fetch source file: HTTP ' + r.status);
-              const data = await r.json();
-              content = data.content;
-            } else {
-              const r = await fetch('/api/gcode-files/current/download');
-              if (!r.ok) throw new Error('Failed to download G-code: HTTP ' + r.status);
-              content = await r.text();
-            }
-
-            const toolToSlot = {};
-            rows.forEach(function(r) {
-              if (r.pocketNumber !== null && r.pocketNumber !== undefined) {
-                toolToSlot[r.toolNumber] = r.pocketNumber;
-              }
-            });
-
-            const transformed = '${SW2026_MARKER}\\n' + performTranslationInBrowser(content, toolToSlot);
-
-            const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
-            const delays = [0, 250, 500, 1000, 2000, 4000];
-            function attempt(i) {
-              fetch('/api/gcode-files/load-temp', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              }).then(function(r) {
-                if (r.ok) return;
-                if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
-                else console.error('[SW2026 dialog] load-temp failed after retries: HTTP ' + r.status);
-              }).catch(function(err) {
-                if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
-                else console.error('[SW2026 dialog] load-temp failed after retries:', err);
-              });
-            }
-            setTimeout(function() { attempt(0); }, delays[0]);
-
-            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'map' } }, '*');
-          } catch (err) {
-            mapBtn.disabled = false; prepareBtn.disabled = !currentStatus().hasPrepareWork; bypassBtn.disabled = false;
-            mapBtn.textContent = 'Apply';
-            alert('Translation failed: ' + (err && err.message ? err.message : err));
+          if (currentStatus().allReady) {
+            setToolSectionState('ready');
           }
         });
 
-        // === Tool Wear Compensation (toggleable section, same dialog) ===
-        // Lists operations (not tools) - a tool used across several
-        // operations gets a separate row per operation, each with its own
-        // Z and X&Y compensation value. Values reset every time this
-        // dialog opens; nothing here is persisted between sessions.
+        document.getElementById('skipToolsBtn').addEventListener('click', function() {
+          setToolSectionState('skipped');
+        });
+
+        // === Operation Management: wear compensation table + Apply/Skip ===
 
         function renderWearCompTable() {
           const tbody = document.getElementById('wcTableBody');
           tbody.innerHTML = wearCompOperations.map(function(op, idx) {
+            const zCell = '<div class="wear-stepper">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" data-op-idx="' + idx + '" data-axis="z">' +
+              '<div class="wear-arrows">' +
+              '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
+              '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
+              '</div></div>';
+            const xyCell = '<div class="wear-stepper">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" data-op-idx="' + idx + '" data-axis="xy">' +
+              '<div class="wear-arrows">' +
+              '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
+              '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
+              '</div></div>';
             return '<tr>' +
               '<td style="padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid var(--color-border, #2a2e33);">' + op.opNumber + '</td>' +
               '<td style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
-              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '—') + '</td>' +
-              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);"><input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="z" style="width:4.5em;"></td>' +
-              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);"><input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="xy" style="width:4.5em;"></td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '\\u2014') + '</td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + zCell + '</td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + xyCell + '</td>' +
               '</tr>';
           }).join('');
         }
 
-        document.getElementById('wcToggleBtn').addEventListener('click', function() {
-          const panel = document.getElementById('wcPanel');
-          const isHidden = panel.style.display === 'none';
-          panel.style.display = isHidden ? 'block' : 'none';
+        document.getElementById('wcTableBody').addEventListener('click', function(e) {
+          const arrow = e.target.closest('.wear-arrow');
+          if (!arrow) return;
+          const dir = parseFloat(arrow.getAttribute('data-dir'));
+          const input = arrow.closest('.wear-stepper').querySelector('.wear-input');
+          const current = parseFloat(input.value);
+          const base = isNaN(current) ? 0 : current;
+          let next = Math.round((base * 100) + (dir * 1)) / 100;
+          next = Math.max(-1, Math.min(1, next));
+          input.value = next.toFixed(2);
+          updateWearInputColor(input);
         });
 
-        document.getElementById('wcCancelBtn').addEventListener('click', function() {
-          document.getElementById('wcPanel').style.display = 'none';
+        document.getElementById('wcTableBody').addEventListener('input', function(e) {
+          const input = e.target.closest('.wear-input');
+          if (!input) return;
+          const raw = parseFloat(input.value);
+          if (!isNaN(raw) && (raw > 1 || raw < -1)) {
+            input.value = Math.max(-1, Math.min(1, raw)).toFixed(2);
+          }
+          updateWearInputColor(input);
+        });
+
+        document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          const arrow = e.target.closest('.wear-arrow');
+          if (arrow) { e.preventDefault(); arrow.click(); }
+        });
+
+        document.getElementById('applySafetyBtn').addEventListener('click', function() {
+          storedWearOffsets = {};
+          document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+            const idx = input.getAttribute('data-op-idx');
+            const axis = input.getAttribute('data-axis');
+            const val = parseFloat(input.value);
+            if (!storedWearOffsets[idx]) storedWearOffsets[idx] = { xy: 0, z: 0 };
+            if (!isNaN(val)) storedWearOffsets[idx][axis] = val;
+          });
+          setOpSectionState('ready');
+        });
+
+        document.getElementById('livingEdgeBtn').addEventListener('click', function() {
+          setOpSectionState('skipped');
         });
 
         function wcShiftLine(line, xyOffset, zOffset) {
@@ -1419,35 +1339,91 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return result.join('\\r\\n');
         }
 
-        document.getElementById('wcApplyBtn').addEventListener('click', async function() {
-          const wcApplyBtn = document.getElementById('wcApplyBtn');
-          const wcCancelBtn = document.getElementById('wcCancelBtn');
-          wcApplyBtn.disabled = true; wcCancelBtn.disabled = true;
-          wcApplyBtn.textContent = 'Applying…';
+        // === Tool translation (T##/H## -> assigned slot) ===
 
-          try {
-            const opOffsets = {};
-            document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
-              const idx = input.getAttribute('data-op-idx');
-              const axis = input.getAttribute('data-axis');
-              const val = parseFloat(input.value);
-              if (!opOffsets[idx]) opOffsets[idx] = { xy: 0, z: 0 };
-              if (!isNaN(val)) opOffsets[idx][axis] = val;
-            });
+        function performTranslationInBrowser(fileContent, toolToSlot) {
+          return fileContent.replace(/^[^\\n]*(?:M0*6|T\\d|H\\d)[^\\n]*$/gmi, function(line) {
+            if (!line) return line;
+            const trimmed = line.trim();
+            if (!trimmed) return line;
+            const firstChar = trimmed.charAt(0);
 
-            let fileContent;
-            if (sourcePath) {
-              const r = await fetch('/api/gcode-files/file?path=' + encodeURIComponent(sourcePath));
-              if (!r.ok) throw new Error('Failed to fetch source file: HTTP ' + r.status);
-              const data = await r.json();
-              fileContent = data.content;
-            } else {
-              const r = await fetch('/api/gcode-files/current/download');
-              if (!r.ok) throw new Error('Failed to download G-code: HTTP ' + r.status);
-              fileContent = await r.text();
+            if (firstChar === '(' || firstChar === ';') {
+              const m = line.match(/T(\\d+)/i);
+              if (m) {
+                const toolNumber = parseInt(m[1], 10);
+                const pocket = toolToSlot[toolNumber];
+                if (pocket !== undefined) {
+                  return line.replace(/T(\\d+)/i, function(_, num) {
+                    return 'T' + pocket + ' [Original: tool ' + num + ']';
+                  });
+                }
+              }
+              return line;
             }
 
-            const transformed = '${SW2026_MARKER}\\n' + applyWearCompensation(fileContent, opOffsets);
+            let out = line;
+            const tm = line.match(/T(\\d+)/i);
+            if (tm) {
+              const toolNumber = parseInt(tm[1], 10);
+              const pocket = toolToSlot[toolNumber];
+              if (pocket !== undefined) out = out.replace(/T\\d+/i, 'T' + pocket);
+            }
+            const hm = out.match(/H(\\d+)/i);
+            if (hm) {
+              const heightNumber = parseInt(hm[1], 10);
+              const pocket = toolToSlot[heightNumber];
+              if (pocket !== undefined) out = out.replace(/H\\d+/i, 'H' + pocket);
+            }
+            return out;
+          });
+        }
+
+        async function fetchOriginalContent() {
+          if (sourcePath) {
+            const r = await fetch('/api/gcode-files/file?path=' + encodeURIComponent(sourcePath));
+            if (!r.ok) throw new Error('Failed to fetch source file: HTTP ' + r.status);
+            const data = await r.json();
+            return data.content;
+          }
+          const r = await fetch('/api/gcode-files/current/download');
+          if (!r.ok) throw new Error('Failed to download G-code: HTTP ' + r.status);
+          return r.text();
+        }
+
+        // === Bring This G-Code To Life! - combined submit ===
+        //
+        // Disabled until both sections have moved off "pending". Runs
+        // whichever transforms each section locked in (skip = no
+        // transform for that section) as a single combined G-code
+        // rewrite, then reloads the translated file once.
+
+        document.getElementById('lifeBtn').addEventListener('click', async function() {
+          const btn = this;
+          btn.disabled = true;
+          btn.textContent = 'Bringing it to life\\u2026';
+
+          try {
+            if (toolSectionState === 'skipped' && opSectionState === 'skipped') {
+              window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'bypass' } }, '*');
+              return;
+            }
+
+            let fileContent = await fetchOriginalContent();
+
+            if (toolSectionState === 'ready') {
+              const toolToSlot = {};
+              rows.forEach(function(r) {
+                if (r.pocketNumber !== null && r.pocketNumber !== undefined) toolToSlot[r.toolNumber] = r.pocketNumber;
+              });
+              fileContent = performTranslationInBrowser(fileContent, toolToSlot);
+            }
+
+            if (opSectionState === 'ready') {
+              fileContent = applyWearCompensation(fileContent, storedWearOffsets);
+            }
+
+            const transformed = '${SW2026_MARKER}\\n' + fileContent;
             const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
             const delays = [0, 250, 500, 1000, 2000, 4000];
             function attempt(i) {
@@ -1457,26 +1433,25 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               }).then(function(r) {
                 if (r.ok) return;
                 if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
-                else console.error('[SW2026 wear-comp] load-temp failed after retries: HTTP ' + r.status);
+                else console.error('[SW2026 dialog] load-temp failed after retries: HTTP ' + r.status);
               }).catch(function(err) {
                 if (i + 1 < delays.length) setTimeout(function() { attempt(i + 1); }, delays[i + 1]);
-                else console.error('[SW2026 wear-comp] load-temp failed after retries:', err);
+                else console.error('[SW2026 dialog] load-temp failed after retries:', err);
               });
             }
             setTimeout(function() { attempt(0); }, delays[0]);
 
-            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'wear-comp-applied' } }, '*');
+            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'life' } }, '*');
           } catch (err) {
-            wcApplyBtn.disabled = false; wcCancelBtn.disabled = false;
-            wcApplyBtn.textContent = 'Apply Wear Comp';
-            alert('Failed to apply wear compensation: ' + (err && err.message ? err.message : err));
+            btn.disabled = false;
+            btn.textContent = '\\u26A1 Bring This G-Code To Life!';
+            alert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
           }
         });
 
         // === Init ===
         renderTable();
         renderWearCompTable();
-        updateBanner();
         fetchMagazineSize().then(function(size) {
           magazineSize = size;
           renderCarousel();

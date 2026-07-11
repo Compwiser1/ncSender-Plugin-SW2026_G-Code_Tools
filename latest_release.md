@@ -1,3 +1,16 @@
+## v1.13.0 (EXPERIMENTAL — layout redesign, not final)
+
+**Dialog restructured into two collapsible sections** — a first draft being tested live, expect follow-up tweaks.
+
+- **🧰 Tool management** and **🛡️ Operation management** replace the old flat single-dialog layout. Both start **collapsed** so the whole workflow is visible before diving into either one; either can be reopened and re-edited at any time.
+- Each section shows its own status badge with an icon: **⏳ In progress...** (default) → **✅ Ready to go!** or **⏭️ Skipped**.
+- **Tool management** buttons: **Organize My Tools** (adds new tools to the library, auto-resolves conflicts, auto-assigns slots — same underlying logic as the old "Add & Assign", now section-scoped) and **I Don't Need This** (skips tool sync/slot translation for this file).
+- **Operation management** buttons: **Apply My Safety Net** (locks in the entered Z/X&Y wear comp values) and **Living On The Edge** (skips wear comp entirely).
+- **New bottom button: ⚡ Bring This G-Code To Life!** — replaces the old separate "Apply"/"Load" and "Apply Wear Comp" buttons. Stays disabled until *both* sections are resolved (organized/applied or explicitly skipped), then runs whichever combination of slot translation and wear compensation was locked in as a single combined G-code rewrite and reloads the file once.
+- **Removed a dead/unused UI element**: the old tools table had a "Tool Wear Compensation" column with per-tool stepper inputs that were never actually wired to any Apply logic (the real, functional wear comp UI was always the separate per-operation table). That column is gone; the polished stepper control design (small glyph, large invisible touch target) that had been built for it was moved onto the real per-operation Z Comp / X&Y Comp inputs instead, which previously had no stepper at all.
+- Tool wear compensation and slot translation are now computed in memory and sent as a single combined write when "Bring This G-Code To Life!" is clicked, instead of two separate `load-temp` calls at different points in the flow.
+- Verified against both the tool-translation regex and the wear-compensation G90/G91-aware transform using the real `Test_15.txt` sample file (including the `G91 G28 Z0` tool-change retract safety case) before release.
+
 ## v1.12.1
 
 **Fix: two dialogs opening at once.** v1.12.0's "reload the file to reopen Wear Compensation" design was broken: clicking a file in ncSender's file browser reads fresh from disk, which never had our marker written to it (the marker only ever existed in a temporary in-memory version created by `load-temp`). So reloading actually fired `onGcodeProgramLoad` from two separate sources at once - the on-disk original (no marker, opened the normal sync/slot dialog) and whatever ncSender still had cached as "current" (marker present, opened Wear Compensation) - both dialogs stacking on screen simultaneously.
