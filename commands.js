@@ -57,14 +57,18 @@ function onGcodeProgramLoad(content, context, settings) {
   // (host sees a graceful fallback, user can still load the file as-is).
   try {
     if (content && content.length > 0 && content.substring(0, 80).indexOf(SW2026_MARKER) !== -1) {
-      // This file was already processed by this plugin (tool sync + slot
-      // translation already happened). Reloading it a second time is how
-      // the user reopens Tool Wear Compensation adjustment without
-      // reloading the original program - registerToolMenu was tested and
-      // confirmed unavailable in this runtime (see v1.11.1/v1.11.2), so
-      // this reuses the one mechanism we know works: onGcodeProgramLoad
-      // itself, firing again on a manual reload of the same file.
-      showWearCompDialog(content, context && context.filename, context && context.sourcePath);
+      // Already processed (tool sync + slot translation already ran) -
+      // this only exists as a loop guard against load-temp re-firing this
+      // same plugin. Tool Wear Compensation is NOT triggered from here:
+      // an earlier attempt tried reopening it by reloading the same file
+      // and detecting this marker, but clicking a file in ncSender's file
+      // browser reads fresh from disk, which never had the marker written
+      // to it (load-temp only ever produced an in-memory/cached version) -
+      // so reloading actually fired onGcodeProgramLoad twice from two
+      // separate sources (the on-disk original, and whatever ncSender
+      // still had cached as "current"), showing both dialogs at once.
+      // Wear Compensation is reachable via a button in the main dialog
+      // instead, available on every load regardless of marker state.
       return content;
     }
 
@@ -83,7 +87,7 @@ function onGcodeProgramLoad(content, context, settings) {
     safeLog('Tool check: ' + rows.length + ' tool(s) - status: ' + overall.status +
       (overall.allReady ? ' (all ready to map)' : ''));
 
-    showUnifiedDialog(context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary);
+    showUnifiedDialog(content, context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary);
 
     // Always return the original content. If the user completes mapping,
     // the dialog's own script uploads the translated file via
@@ -337,7 +341,8 @@ function parseOperations(content) {
 
 // === Unified dialog: sync + slot mapping + translation ===
 
-function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
+function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary) {
+  const wearCompOperations = parseOperations(content);
   const statusConfig = {
     red: {
       color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
@@ -556,6 +561,26 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         <button id="prepareBtn" class="btn btn-badge-orange" disabled>Add &amp; Assign</button>
         <button id="mapBtn" class="btn btn-glow-green" disabled>Apply</button>
         <button id="bypassBtn" class="btn btn-glow-red">Bypass</button>
+        <button id="wcToggleBtn" type="button" class="btn btn-secondary">Tool Wear Compensation</button>
+      </div>
+
+      <div id="wcPanel" style="display:none; margin-top:14px; border-top:1px solid var(--color-border, #3a3f45); padding-top:14px;">
+        <table class="wc-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+          <thead>
+            <tr>
+              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
+              <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
+              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
+              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
+              <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
+            </tr>
+          </thead>
+          <tbody id="wcTableBody"></tbody>
+        </table>
+        <div class="actions" style="margin-top:12px;">
+          <button type="button" id="wcApplyBtn" class="btn btn-glow-green">Apply Wear Comp</button>
+          <button type="button" id="wcCancelBtn" class="btn btn-secondary">Close</button>
+        </div>
       </div>
     </div>
 
@@ -573,6 +598,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         const toolLibrary = ${JSON.stringify(dialogToolLibrary)};
         const sourcePath = ${JSON.stringify(sourcePath || '')};
         const filename = ${JSON.stringify(filename || 'translated.gcode')};
+        const wearCompOperations = ${JSON.stringify(wearCompOperations)};
         let magazineSize = 0;
         let currentSlotRow = null;
 
@@ -1319,98 +1345,36 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           }
         });
 
-        // === Init ===
-        renderTable();
-        updateBanner();
-        fetchMagazineSize().then(function(size) {
-          magazineSize = size;
-          renderCarousel();
+        // === Tool Wear Compensation (toggleable section, same dialog) ===
+        // Lists operations (not tools) - a tool used across several
+        // operations gets a separate row per operation, each with its own
+        // Z and X&Y compensation value. Values reset every time this
+        // dialog opens; nothing here is persisted between sessions.
+
+        function renderWearCompTable() {
+          const tbody = document.getElementById('wcTableBody');
+          tbody.innerHTML = wearCompOperations.map(function(op, idx) {
+            return '<tr>' +
+              '<td style="padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid var(--color-border, #2a2e33);">' + op.opNumber + '</td>' +
+              '<td style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '—') + '</td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);"><input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="z" style="width:4.5em;"></td>' +
+              '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);"><input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="xy" style="width:4.5em;"></td>' +
+              '</tr>';
+          }).join('');
+        }
+
+        document.getElementById('wcToggleBtn').addEventListener('click', function() {
+          const panel = document.getElementById('wcPanel');
+          const isHidden = panel.style.display === 'none';
+          panel.style.display = isHidden ? 'block' : 'none';
         });
-      })();
-    <\/script>
-  `;
 
-  if (typeof pluginContext.showDialog !== 'function') {
-    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
-  }
+        document.getElementById('wcCancelBtn').addEventListener('click', function() {
+          document.getElementById('wcPanel').style.display = 'none';
+        });
 
-  const response = pluginContext.showDialog('SolidWorks 2026 G-Code Tools', html, { closable: false });
-
-  if (response && response.action) {
-    return response;
-  }
-  return { action: 'bypass' };
-}
-
-// === Tool Wear Compensation dialog (reopen via reloading an
-// already-processed file) ===
-//
-// Applying a value here rewrites the G-code: every absolute-mode (G90)
-// X/Y coordinate in that operation's line range shifts by the X&Y value,
-// and every absolute-mode Z/R (canned-cycle retract plane) coordinate
-// shifts by the Z value. G91 (incremental) mode lines are never touched,
-// since those coordinates are relative deltas, not absolute positions -
-// shifting them would be wrong regardless of which operation they're in.
-// This was verified against a real corruption risk: a G91 G28 Z0
-// tool-change retract line that technically fell inside an operation's
-// calculated line range.
-function showWearCompDialog(content, filename, sourcePath) {
-  const operations = parseOperations(content);
-
-  if (operations.length === 0) {
-    pluginContext.showDialog(
-      'Tool Wear Compensation',
-      '<div style="padding:20px; color:#e0e0e0; font-family:sans-serif;">No operations found in this file.</div>',
-      { closable: true }
-    );
-    return;
-  }
-
-  const rowsHtml = operations.map(function(op, idx) {
-    return '<tr>' +
-      '<td style="padding:8px 10px; text-align:center; font-weight:700;">' + op.opNumber + '</td>' +
-      '<td style="padding:8px 10px;">' + escapeHtmlServerSide(op.opName) + '</td>' +
-      '<td style="padding:8px 10px; text-align:center;">' + (op.toolNumber !== null ? op.toolNumber : '—') + '</td>' +
-      '<td style="padding:8px 10px; text-align:center;"><input type="text" class="wc-input" inputmode="decimal" ' +
-        'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="z"></td>' +
-      '<td style="padding:8px 10px; text-align:center;"><input type="text" class="wc-input" inputmode="decimal" ' +
-        'pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" data-op-idx="' + idx + '" data-axis="xy"></td>' +
-      '</tr>';
-  }).join('');
-
-  const html = `
-    <style>
-      body { margin:0; }
-      .wc-container { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--color-text-primary, #e0e0e0); padding: 16px 20px; max-width: 720px; margin: 0 auto; }
-      .wc-header { text-align: center; font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; }
-      .wc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-      .wc-table th { text-align: center; padding: 8px 10px; background: var(--color-surface-muted-2, #1f2327); color: #fff; border-bottom: 2px solid var(--color-border, #3a3f45); }
-      .wc-table td { border-bottom: 1px solid var(--color-border, #2a2e33); }
-      .wc-input { width: 4.5em; text-align: center; background: var(--color-surface, #0e1113); border: 1px solid var(--color-border, #444); border-radius: 5px; color: var(--color-text-primary, #e0e0e0); padding: 4px; }
-      .wc-actions { display: flex; gap: 14px; justify-content: center; margin-top: 16px; }
-      .wc-btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-transform: uppercase; }
-      .wc-btn:disabled { opacity: 0.5; cursor: default; }
-      .wc-btn-apply { background: #1a4d2e; color: #fff; border: 1px solid #28a745; }
-      .wc-btn-cancel { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
-    </style>
-    <div class="wc-container">
-      <div class="wc-header">Tool Wear Compensation</div>
-      <table class="wc-table">
-        <thead><tr><th>Op #</th><th style="text-align:left;">Operation</th><th>Tool #</th><th>Z Comp</th><th>X&amp;Y Comp</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-      <div class="wc-actions">
-        <button type="button" class="wc-btn wc-btn-apply" id="wcApplyBtn">Apply</button>
-        <button type="button" class="wc-btn wc-btn-cancel" id="wcCancelBtn">Cancel</button>
-      </div>
-    </div>
-    <script>
-      (function() {
-        const operations = ${JSON.stringify(operations)};
-        const filename = ${JSON.stringify(filename || '')};
-        const sourcePath = ${JSON.stringify(sourcePath || '')};
-
-        function shiftLine(line, xyOffset, zOffset) {
+        function wcShiftLine(line, xyOffset, zOffset) {
           return line.replace(/([XYZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
             const num = parseFloat(numStr);
             const delta = (letter === 'X' || letter === 'Y') ? xyOffset : zOffset;
@@ -1419,7 +1383,7 @@ function showWearCompDialog(content, filename, sourcePath) {
           });
         }
 
-        function hasGWord(line, word) {
+        function wcHasGWord(line, word) {
           const tokens = line.toUpperCase().split(' ');
           for (let i = 0; i < tokens.length; i++) {
             if (tokens[i] === word) return true;
@@ -1431,7 +1395,7 @@ function showWearCompDialog(content, filename, sourcePath) {
           const lines = fileContent.split(/\\r?\\n/);
           const lineOffset = new Array(lines.length).fill(null);
 
-          operations.forEach(function(op, idx) {
+          wearCompOperations.forEach(function(op, idx) {
             const offset = opOffsets[idx];
             if (!offset || (offset.xy === 0 && offset.z === 0)) return;
             for (let i = op.startLine; i <= op.endLine && i < lines.length; i++) {
@@ -1441,33 +1405,29 @@ function showWearCompDialog(content, filename, sourcePath) {
 
           let absoluteMode = true;
           const result = lines.map(function(line, i) {
-            if (hasGWord(line, 'G91')) absoluteMode = false;
-            if (hasGWord(line, 'G90')) absoluteMode = true;
+            if (wcHasGWord(line, 'G91')) absoluteMode = false;
+            if (wcHasGWord(line, 'G90')) absoluteMode = true;
 
             const offset = lineOffset[i];
             if (!offset) return line;
             if (!absoluteMode) return line;
             if (/^\\s*\\(/.test(line)) return line;
 
-            return shiftLine(line, offset.xy, offset.z);
+            return wcShiftLine(line, offset.xy, offset.z);
           });
 
           return result.join('\\r\\n');
         }
 
-        document.getElementById('wcCancelBtn').addEventListener('click', function() {
-          window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'cancel' } }, '*');
-        });
-
         document.getElementById('wcApplyBtn').addEventListener('click', async function() {
-          const applyBtn = document.getElementById('wcApplyBtn');
-          const cancelBtn = document.getElementById('wcCancelBtn');
-          applyBtn.disabled = true; cancelBtn.disabled = true;
-          applyBtn.textContent = 'Applying…';
+          const wcApplyBtn = document.getElementById('wcApplyBtn');
+          const wcCancelBtn = document.getElementById('wcCancelBtn');
+          wcApplyBtn.disabled = true; wcCancelBtn.disabled = true;
+          wcApplyBtn.textContent = 'Applying…';
 
           try {
             const opOffsets = {};
-            document.querySelectorAll('.wc-input').forEach(function(input) {
+            document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
               const idx = input.getAttribute('data-op-idx');
               const axis = input.getAttribute('data-axis');
               const val = parseFloat(input.value);
@@ -1487,7 +1447,7 @@ function showWearCompDialog(content, filename, sourcePath) {
               fileContent = await r.text();
             }
 
-            const transformed = applyWearCompensation(fileContent, opOffsets);
+            const transformed = '${SW2026_MARKER}\\n' + applyWearCompensation(fileContent, opOffsets);
             const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
             const delays = [0, 250, 500, 1000, 2000, 4000];
             function attempt(i) {
@@ -1505,16 +1465,34 @@ function showWearCompDialog(content, filename, sourcePath) {
             }
             setTimeout(function() { attempt(0); }, delays[0]);
 
-            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'apply' } }, '*');
+            window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'wear-comp-applied' } }, '*');
           } catch (err) {
-            applyBtn.disabled = false; cancelBtn.disabled = false;
-            applyBtn.textContent = 'Apply';
+            wcApplyBtn.disabled = false; wcCancelBtn.disabled = false;
+            wcApplyBtn.textContent = 'Apply Wear Comp';
             alert('Failed to apply wear compensation: ' + (err && err.message ? err.message : err));
           }
         });
+
+        // === Init ===
+        renderTable();
+        renderWearCompTable();
+        updateBanner();
+        fetchMagazineSize().then(function(size) {
+          magazineSize = size;
+          renderCarousel();
+        });
       })();
-    <\\/script>
+    <\/script>
   `;
 
-  pluginContext.showDialog('Tool Wear Compensation', html, { closable: true });
+  if (typeof pluginContext.showDialog !== 'function') {
+    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
+  }
+
+  const response = pluginContext.showDialog('SolidWorks 2026 G-Code Tools', html, { closable: false });
+
+  if (response && response.action) {
+    return response;
+  }
+  return { action: 'bypass' };
 }

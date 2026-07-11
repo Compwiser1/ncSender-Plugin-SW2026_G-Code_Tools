@@ -1,3 +1,11 @@
+## v1.12.1
+
+**Fix: two dialogs opening at once.** v1.12.0's "reload the file to reopen Wear Compensation" design was broken: clicking a file in ncSender's file browser reads fresh from disk, which never had our marker written to it (the marker only ever existed in a temporary in-memory version created by `load-temp`). So reloading actually fired `onGcodeProgramLoad` from two separate sources at once - the on-disk original (no marker, opened the normal sync/slot dialog) and whatever ncSender still had cached as "current" (marker present, opened Wear Compensation) - both dialogs stacking on screen simultaneously.
+
+**Redesigned to avoid this entirely:** Tool Wear Compensation is now a toggleable section *within* the same main dialog (a "Tool Wear Compensation" button shows/hides it), rather than a separate dialog triggered by a fragile reload-detection heuristic. Only one dialog ever exists.
+
+**Also found and fixed two escaping bugs** while re-verifying the transform logic against the real sample file after this rebuild - both caused by using single backslashes (`\r`, `\n`, `\s`, `\(`) in code that lives inside a template literal one level too deep, causing premature conversion to raw control characters instead of surviving as literal escape-sequence text for the browser to interpret. Caught via the same "extract the actual generated code and test it directly" process used throughout this feature's development, not by inspection alone.
+
 ## v1.12.0
 
 **Tool Wear Compensation - real feature, not experimental.**
