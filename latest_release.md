@@ -1,3 +1,30 @@
+## v1.8.0
+
+**Dialog redesign — magazine graphic, table layout, and Tool Wear Compensation.**
+
+Graphic:
+- Removed the collapsible instructions panel from v1.7.0 entirely; the status banner alone now carries the message.
+- Enlarged the magazine graphic to use the reclaimed space (`SCALE` increased from 0.65 → 0.82 over several passes).
+- No header label above the slot numbers in the final version (a "Slot #" label and later an "ATC" label were both tried and removed).
+- Tool circles and their matching left-side slot number now **glow** in their status color (green for In Sync, amber for Conflict) via SVG filters — plain circles/numbers for empty slots stay ungloved.
+- "TLS" base-mount label size now matches the slot number label size exactly.
+
+Table:
+- "G-Code Data" renamed to **"Program Tool Information"**, halved in width to make room for a new **Tool Wear Compensation** column.
+- New Tool Wear Compensation column: a `#.##`-formatted text input per tool (native pattern validation, 0.00–9.99) with up/down stepper arrows that increment/decrement by 0.01, clamped at the format's bounds. UI only for now — no backend logic reads these values yet.
+- "Sync" renamed to **"Status"**; all headers centered (fixed a CSS specificity bug where `.tools-table th` was silently beating the centering rules); header text enlarged.
+- Tool # column narrowed and its text enlarged; Slot column text significantly enlarged and restyled to look like an actual dropdown (bordered box, large chevron) instead of plain clickable text.
+- Added subtle vertical dividers between columns, shortened top/bottom so they never touch the horizontal row dividers.
+- Status badges: "In Sync" and "New" enlarged (both share the same green style); "Conflict" kept its original size. All three badge colors now have a matching glow.
+- Conflict rows get a rounded, glowing red border around the whole Status cell, sized to match the true cell dimensions — implemented on an inner wrapper `<div>` rather than the `<td>` itself, since `border-radius` has no effect on table cells under `border-collapse: collapse`.
+- Slot-picker dropdown popup's list-item text size now matches the size shown after a slot is actually selected (was previously smaller and inconsistent).
+
+Header & buttons:
+- "Program Name" moved to the far left of the header as a single line: bold **Program Name:** label followed by the filename.
+- Dialog title renamed to **"SolidWorks 2026 G-Code Tools"**.
+- "Add Tools & Auto-Assign Slots" renamed to **"Add & Assign"**; "Load" renamed to **"Apply"** — both now share a glowing green style matching the status badges.
+- "Bypass" restyled to a matching glowing red style.
+
 ## v1.7.1
 
 - **Fix: table headers weren't actually centered.** Found the real cause: `.tools-table th` (class + element selector) had higher CSS specificity than `.col-toolnum`/`.col-status`/`.col-slot` (single-class selectors) alone, so the header's default left-alignment always won regardless of source order. Data cells were never affected by this (no competing rule), which is why only the headers looked wrong. Fixed by adding a more specific selector for the header cells.

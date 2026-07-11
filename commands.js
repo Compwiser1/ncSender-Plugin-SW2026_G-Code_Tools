@@ -279,20 +279,14 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     red: {
       color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
       title: 'Tool Library Conflicts Found',
-      message: 'Some tools in this file don\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\'s values automatically.',
-      details: 'A conflict means the tool number in this G-code file already exists in your ncSender Tool Library, but with a different type, diameter, or description than what\'s specified here - this usually happens when a tool number gets reused for a different bit over time. Clicking "Add Tools & Auto-Assign Slots" updates the library to match this file\'s values automatically; no manual choice is needed, since the G-code is always treated as the source of truth. You can review exactly what will change in the Status column before it happens. A resolved tool still needs a magazine slot assigned before this file can be loaded.'
     },
     yellow: {
       color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.1)', icon: '🟡',
       title: 'Tools Need Attention',
-      message: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".',
-      details: 'This file references tools that either aren\'t in your ncSender Tool Library yet, or are in the library but haven\'t been assigned to a physical ATC magazine slot. Clicking "Add Tools & Auto-Assign Slots" handles both steps in one click: it adds any missing tools to the library, then fills empty slots for anything that still needs one. If the magazine is full, it automatically frees up slots occupied by tools this file doesn\'t need - you\'ll be asked to confirm before anything is cleared. You can also click any tool\'s Slot value directly at any time, including after auto-assign has run, to manually assign or reassign it. Once every tool is in the library and has a slot, "Load" becomes enabled.'
     },
     green: {
       color: '#28a745', bgColor: 'rgba(40, 167, 69, 0.1)', icon: '🟢',
       title: 'All Tools Ready',
-      message: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.',
-      details: 'All tools referenced in this file are in your ncSender Tool Library and have a magazine slot assigned. Clicking "Load" rewrites this file\'s tool references to match your actual slot assignments (for example, T18 M06 becomes T3 M06) and reloads the translated file, so the ATC moves to the correct physical position during the job. If you\'d still like to change a tool\'s slot assignment, click its Slot value in the table - you can do this at any time, including right now before clicking Load.'
     }
   };
   const config = statusConfig[status];
@@ -315,32 +309,20 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       }
       .sw-header {
         display: flex; align-items: center; justify-content: space-between;
-        flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+        flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
       }
-      .sw-progname-block { text-align: center; flex: 1 1 auto; min-width: 0; }
+      .sw-progname-block { text-align: left; flex: 1 1 auto; min-width: 0; }
       .sw-progname-label {
-        font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-        color: var(--color-text-secondary, #999); margin-bottom: 2px;
+        font-size: 1rem; font-weight: 700;
+        color: var(--color-text-primary, #e0e0e0);
       }
-      .sw-filename { color: var(--color-text-primary, #e0e0e0); font-size: 0.9rem; word-break: break-all; }
+      .sw-filename { color: var(--color-text-secondary, #ccc); font-size: 0.9rem; word-break: break-all; }
       .sw-banner {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 6px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;
         background: ${config.bgColor}; border: 2px solid ${config.color}; color: ${config.color};
         flex-shrink: 0;
       }
-      .sw-message {
-        background: var(--color-surface-muted, #1a1a1a);
-        padding: 10px 14px; border-radius: 8px; line-height: 1.4; font-size: 0.85rem;
-        margin-bottom: 10px;
-      }
-      .sw-message-summary { margin: 0; }
-      .sw-message-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border, #333); color: var(--color-text-secondary, #ccc); }
-      .sw-message-toggle {
-        background: none; border: none; color: var(--color-accent, #1abc9c); font-size: 0.78rem;
-        font-weight: 600; cursor: pointer; padding: 6px 0 0; margin: 0;
-      }
-      .sw-message-toggle:hover { text-decoration: underline; }
       .sw-main {
         display: flex; gap: 0; align-items: stretch;
         background: var(--color-surface-muted, #1a1a1a);
@@ -358,13 +340,46 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .tools-table-container::-webkit-scrollbar-thumb:hover { background: #6b6f74; }
       .tools-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
       .tools-table thead { position: sticky; top: 0; background: var(--color-surface-muted-2, #1f2327); z-index: 1; }
-      .tools-table th { padding: 6px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--color-border, #3a3f45); font-size: 0.875rem; color: #ffffff; white-space: nowrap; }
-      .tools-table td { padding: 4px 8px; border-bottom: 1px solid var(--color-border, #2a2e33); vertical-align: middle; font-size: 0.82rem; }
+      .tools-table th { padding: 6px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid var(--color-border, #3a3f45); font-size: 1rem; color: #ffffff; white-space: nowrap; position: relative; }
+      .tools-table td { padding: 4px 8px; border-bottom: 1px solid var(--color-border, #2a2e33); vertical-align: middle; font-size: 0.82rem; position: relative; }
+      .tools-table th:not(:last-child)::after,
+      .tools-table td:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 6px; bottom: 6px; right: 0;
+        width: 1px;
+        background: var(--color-border, #3a3f45);
+      }
       .tools-table tbody tr:hover { background: var(--color-border, #2a2a2a); }
       .col-toolnum { text-align: center; }
+      .tools-table td.col-toolnum { font-size: 1.1rem; }
       .col-status { text-align: center; }
       .col-slot { text-align: center; }
-      .tools-table th.col-toolnum, .tools-table th.col-status, .tools-table th.col-slot { text-align: center; }
+      .tools-table td.col-slot { font-size: 1.2rem; }
+      .col-wear { text-align: center; }
+      .tools-table th.col-toolnum, .tools-table th.col-status, .tools-table th.col-slot, .tools-table th.col-wear { text-align: center; }
+      .wear-input {
+        width: 4.5em; text-align: center; font-size: 1.2rem;
+        background: var(--color-surface, #0e1113);
+        border: 1px solid var(--color-border, #444);
+        border-radius: 5px 0 0 5px; color: var(--color-text-primary, #e0e0e0);
+        padding: 3px 4px;
+      }
+      .wear-stepper { display: inline-flex; align-items: stretch; vertical-align: middle; }
+      .wear-arrows { display: flex; flex-direction: column; }
+      .wear-arrow {
+        width: 2.8em; flex: 1;
+        background: var(--color-surface-muted, #1a1a1a);
+        border: 1px solid var(--color-border, #444);
+        border-left: none;
+        color: var(--color-text-secondary, #999);
+        font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0;
+      }
+      .wear-arrow-up { border-radius: 0 5px 0 0; border-bottom: none; }
+      .wear-arrow-down { border-radius: 0 0 5px 0; }
+      .wear-arrow:hover { background: var(--color-border, #333); color: var(--color-accent, #1abc9c); }
+      .wear-input:focus { outline: none; border-color: var(--color-accent, #1abc9c); }
+      .wear-input::placeholder { color: var(--color-text-secondary, #666); }
       .gcode-cell { overflow: hidden; }
       .gcode-cell .gc-type { font-weight: 700; }
       .gcode-cell .gc-detail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; font-style: italic; font-size: 0.85em; }
@@ -372,9 +387,10 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem;
         font-weight: 600; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap;
       }
-      .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; }
-      .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; }
-      .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; }
+      .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(40,167,69,0.55); }
+      .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; box-shadow: 0 0 8px 1px rgba(153,153,153,0.4); }
+      .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; box-shadow: 0 0 8px 1px rgba(220,53,69,0.55); }
+      .status-conflict-wrap { border: 3px solid #dc3545; border-radius: 16px; box-shadow: 0 0 10px 1px rgba(220,53,69,0.55); padding: 6px 8px; margin: -4px -8px; }
       .tool-num { font-weight: 700; }
       .conflict-diff { margin-top: 2px; font-size: 0.7rem; line-height: 1.3; }
       .conflict-diff .lib-val { color: #f59e0b; }
@@ -385,6 +401,18 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .btn-primary:hover { opacity: 0.9; }
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
       .btn-secondary:hover { background: var(--color-border, #444); }
+      .btn-glow-green {
+        background: rgba(40,167,69,0.2); color: #28a745; border: 1px solid #28a745;
+        box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
+      }
+      .btn-glow-green:hover:not(:disabled) { background: rgba(40,167,69,0.32); }
+      .btn-glow-green:disabled { box-shadow: none; }
+      .btn-glow-red {
+        background: rgba(220,53,69,0.2); color: #dc3545; border: 1px solid #dc3545;
+        box-shadow: 0 0 10px 1px rgba(220,53,69,0.55);
+      }
+      .btn-glow-red:hover:not(:disabled) { background: rgba(220,53,69,0.32); }
+      .btn-glow-red:disabled { box-shadow: none; }
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
         display: inline-flex; align-items: center; gap: 5px;
@@ -394,10 +422,10 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       }
       .slot-cell::after {
         content: '\\25BE';
-        font-size: 0.7em; font-weight: 400; color: var(--color-text-secondary, #999);
+        font-size: 2.1rem; font-weight: 400; color: var(--color-text-secondary, #999); line-height: 0.6;
       }
       .slot-cell:hover { border-color: var(--color-accent, #1abc9c); background: var(--color-surface-muted, #1a1a1a); }
-      .slot-cell-placeholder { font-size: 0.65rem; color: #f59e0b; font-weight: 600; cursor: pointer; }
+      .slot-cell-placeholder { color: #f59e0b; font-weight: 600; cursor: pointer; }
       .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
       .slot-selector-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99998; display: none; }
       .slot-selector-overlay.show { display: block; }
@@ -408,7 +436,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       }
       .slot-selector-header { padding: 10px 12px; font-size: 0.85rem; font-weight: 600; color: var(--color-text-secondary, #999); border-bottom: 1px solid var(--color-border, #444); flex-shrink: 0; }
       .slot-selector-list { overflow-y: auto; flex: 1; }
-      .slot-selector-item { padding: 8px 12px; font-size: 0.85rem; color: var(--color-text-primary, #e0e0e0); cursor: pointer; transition: background 0.1s ease; }
+      .slot-selector-item { padding: 8px 12px; font-size: 1.2rem; color: var(--color-text-primary, #e0e0e0); cursor: pointer; transition: background 0.1s ease; }
       .slot-selector-item:hover { background: var(--color-surface-muted, #1a1a1a); }
       .slot-selector-item--active { background: var(--color-accent, #1abc9c); color: white; }
       .slot-selector-item--active:hover { background: var(--color-accent, #1abc9c); }
@@ -419,8 +447,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
     <div class="sw-container">
       <div class="sw-header">
         <div class="sw-progname-block">
-          <div class="sw-progname-label">Program Name</div>
-          <div class="sw-filename">${filename || 'G-Code File'}</div>
+          <span class="sw-progname-label">Program Name: </span><span class="sw-filename">${filename || 'G-Code File'}</span>
         </div>
         <div class="sw-banner" id="swBanner">
           <span id="swIcon">${config.icon}</span>
@@ -428,20 +455,15 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         </div>
       </div>
 
-      <div class="sw-message" id="swMessage">
-        <div class="sw-message-summary" id="swMessageSummary">${config.message}</div>
-        <div class="sw-message-details" id="swMessageDetails" style="display:none;">${config.details}</div>
-        <button type="button" class="sw-message-toggle" id="swMessageToggle">Show details &#9662;</button>
-      </div>
-
       <div class="sw-main">
         <div class="tools-table-container" id="toolsTableContainer">
           <table class="tools-table">
             <colgroup>
-              <col style="width: 11%;">
-              <col style="width: 50%;">
+              <col style="width: 7%;">
+              <col style="width: 27%;">
               <col style="width: 24%;">
               <col style="width: 15%;">
+              <col style="width: 27%;">
             </colgroup>
             <thead>
               <tr>
@@ -449,6 +471,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
                 <th>Program Tool Information</th>
                 <th class="col-status">Status</th>
                 <th class="col-slot">Slot</th>
+                <th class="col-wear">Tool Wear Compensation</th>
               </tr>
             </thead>
             <tbody id="toolsTableBody"></tbody>
@@ -458,9 +481,9 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       </div>
 
       <div class="actions">
-        <button id="prepareBtn" class="btn btn-secondary" disabled>Add Tools &amp; Auto-Assign Slots</button>
-        <button id="mapBtn" class="btn btn-primary" disabled>Load</button>
-        <button id="bypassBtn" class="btn btn-secondary">Bypass</button>
+        <button id="prepareBtn" class="btn btn-glow-green" disabled>Add &amp; Assign</button>
+        <button id="mapBtn" class="btn btn-glow-green" disabled>Apply</button>
+        <button id="bypassBtn" class="btn btn-glow-red">Bypass</button>
       </div>
     </div>
 
@@ -516,7 +539,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           // actual dialog viewport - it pushed the action buttons off
           // screen and forced the whole dialog to scroll as one unit.
           // Adjust SCALE alone to resize everything proportionally.
-          const SCALE = 0.65;
+          const SCALE = 0.82;
           const PITCH = Math.round(80 * SCALE);
           const FIRST_CY = Math.round(54 * SCALE);
           const BULGE_R = Math.round(52 * SCALE);
@@ -530,8 +553,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const LABEL_FS = Math.max(7, Math.round(13 * SCALE));
           const NUMBER_FS = Math.max(11, Math.round(24 * SCALE));
           const DASH_FS = Math.max(10, Math.round(18 * SCALE));
-          const DIGIT_FS = Math.max(11, Math.round(20 * SCALE));
-          const TLS_FS = Math.max(9, Math.round(15 * SCALE));
+          const DIGIT_FS = Math.max(13, Math.round(26 * SCALE));
+          const TLS_FS = DIGIT_FS;
           const KNOB_R = Math.max(8, Math.round(17 * SCALE));
           const LABEL_DY = Math.round(-5 * SCALE);
           const NUMBER_DY = Math.round(19 * SCALE);
@@ -540,9 +563,11 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const KNOB_DY = Math.round(29 * SCALE);
           const TLS_DY = Math.round(33 * SCALE);
           const DIGIT_X = Math.round(24 * SCALE);
+          const TOP_PAD = Math.max(4, Math.round(6 * SCALE)); // small fixed margin only, no header reserved anymore
 
           const n = Math.max(magazineSize, 1);
-          const lastCy = FIRST_CY + (n - 1) * PITCH;
+          const lastCy = TOP_PAD + FIRST_CY + (n - 1) * PITCH;
+          const topCy = TOP_PAD + FIRST_CY;
           const capTop = lastCy + CAP_GAP;
           const capBottom = capTop + CAP_H;
           const svgH = capBottom + BOTTOM_PAD;
@@ -563,7 +588,20 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           let defs = '<defs><linearGradient id="swCaseGrad" x1="0" y1="0" x2="1" y2="0">' +
             '<stop offset="0%" stop-color="#4a4d50"/><stop offset="45%" stop-color="#383b3e"/><stop offset="100%" stop-color="#222426"/>' +
-            '</linearGradient></defs>';
+            '</linearGradient>' +
+            '<filter id="glowGreen" x="-60%" y="-60%" width="220%" height="220%">' +
+            '<feGaussianBlur stdDeviation="2.5" result="blur"/>' +
+            '<feFlood flood-color="#22c55e" flood-opacity="0.9" result="color"/>' +
+            '<feComposite in="color" in2="blur" operator="in" result="glow"/>' +
+            '<feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+            '</filter>' +
+            '<filter id="glowAmber" x="-60%" y="-60%" width="220%" height="220%">' +
+            '<feGaussianBlur stdDeviation="2.5" result="blur"/>' +
+            '<feFlood flood-color="#f2a623" flood-opacity="0.9" result="color"/>' +
+            '<feComposite in="color" in2="blur" operator="in" result="glow"/>' +
+            '<feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+            '</filter>' +
+            '</defs>';
 
           let bulges = '';
           let bezels = '';
@@ -571,29 +609,32 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           let digits = '';
 
           for (let i = 1; i <= n; i++) {
-            const cy = FIRST_CY + (n - i) * PITCH; // slot n at top, slot 1 at bottom
+            const cy = topCy + (n - i) * PITCH; // slot n at top, slot 1 at bottom
             bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="url(#swCaseGrad)"/>';
             bezels += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BEZEL_R + '" fill="#6b6f74"/>';
 
             const occ = bySlot[i];
             let digitColor = '#e8e8e6';
+            let digitFilter = '';
 
             if (occ && occ.action === 'match') {
-              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#22c55e"/>' +
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#22c55e" filter="url(#glowGreen)"/>' +
                 '<text x="' + cx + '" y="' + (cy + LABEL_DY) + '" text-anchor="middle" font-size="' + LABEL_FS + '" fill="#0a2c14">Tool #</text>' +
                 '<text x="' + cx + '" y="' + (cy + NUMBER_DY) + '" text-anchor="middle" font-weight="700" font-size="' + NUMBER_FS + '" fill="#0a2c14">' + occ.toolNumber + '</text>';
               digitColor = '#22c55e';
+              digitFilter = ' filter="url(#glowGreen)"';
             } else if (occ && occ.action === 'conflict') {
-              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#f2a623"/>' +
+              inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#f2a623" filter="url(#glowAmber)"/>' +
                 '<text x="' + cx + '" y="' + (cy + LABEL_DY) + '" text-anchor="middle" font-size="' + LABEL_FS + '" fill="#3d2500">Tool #</text>' +
                 '<text x="' + cx + '" y="' + (cy + NUMBER_DY) + '" text-anchor="middle" font-weight="700" font-size="' + NUMBER_FS + '" fill="#3d2500">' + occ.toolNumber + '</text>';
               digitColor = '#f2a623';
+              digitFilter = ' filter="url(#glowAmber)"';
             } else {
               inner += '<circle cx="' + cx + '" cy="' + cy + '" r="' + INNER_R + '" fill="#0e1113"/>' +
                 '<text x="' + cx + '" y="' + (cy + DASH_DY) + '" text-anchor="middle" font-size="' + DASH_FS + '" fill="#5a5f66">&#8212;</text>';
             }
 
-            digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '">' + i + '</text>';
+            digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
           }
 
           const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="url(#swCaseGrad)"/>' +
@@ -632,11 +673,16 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               // using the G-code's values when "Add Tools & Auto-Assign
               // Slots" runs. This is purely informational so the user can
               // see what's about to change.
-              syncCell += '<div class="conflict-diff">' +
+              const diff = '<div class="conflict-diff">' +
                 '<div class="lib-val">Library: ' + escapeHtml(r.libType) + ' — ' +
                   (r.libDiameter !== null ? r.libDiameter.toFixed(2) : '?') + ' mm — ' + escapeHtml(r.libDescription) + '</div>' +
                 '<div class="gcode-val">Will use: ' + escapeHtml(r.mappedType) + ' — ' + r.diameter.toFixed(2) + ' mm — ' + escapeHtml(r.description) + '</div>' +
               '</div>';
+              // border-radius has no effect on <td> when the table uses
+              // border-collapse:collapse (which ours does, for the row/
+              // column dividers) - so the rounded/glowing border has to
+              // live on this inner wrapper div instead of the cell itself.
+              syncCell = '<div class="status-conflict-wrap">' + syncCell + diff + '</div>';
             }
 
             let slotCell;
@@ -648,7 +694,17 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
               slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
+            const wearCell = '<div class="wear-stepper">' +
+              '<input type="text" class="wear-input" inputmode="decimal" ' +
+              'pattern="^[0-9][.][0-9]{2}$" maxlength="4" placeholder="0.00" ' +
+              'title="Format: #.## (one digit, decimal point, two digits)" ' +
+              'data-tool-idx="' + idx + '">' +
+              '<div class="wear-arrows">' +
+              '<button type="button" class="wear-arrow wear-arrow-up" data-tool-idx="' + idx + '" data-dir="1" aria-label="Increase by 0.01">&#9650;</button>' +
+              '<button type="button" class="wear-arrow wear-arrow-down" data-tool-idx="' + idx + '" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</button>' +
+              '</div></div>';
+
+            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td><td class="col-wear">' + wearCell + '</td></tr>';
           }).join('');
         }
 
@@ -656,18 +712,12 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const cfg = {
             red: {
               color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found',
-              msg: 'Some tools in this file don\\'t match the ncSender Tool Library. Click "Add Tools & Auto-Assign Slots" to update them to the G-code\\'s values automatically.',
-              details: 'A conflict means the tool number in this G-code file already exists in your ncSender Tool Library, but with a different type, diameter, or description than what\\'s specified here - this usually happens when a tool number gets reused for a different bit over time. Clicking "Add Tools & Auto-Assign Slots" updates the library to match this file\\'s values automatically; no manual choice is needed, since the G-code is always treated as the source of truth. You can review exactly what will change in the Status column before it happens. A resolved tool still needs a magazine slot assigned before this file can be loaded.'
             },
             yellow: {
               color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention',
-              msg: 'Click "Add Tools & Auto-Assign Slots" to prepare everything at once, or use the table to add/assign individual tools. Adjust anything afterward, then click "Load".',
-              details: 'This file references tools that either aren\\'t in your ncSender Tool Library yet, or are in the library but haven\\'t been assigned to a physical ATC magazine slot. Clicking "Add Tools & Auto-Assign Slots" handles both steps in one click: it adds any missing tools to the library, then fills empty slots for anything that still needs one. If the magazine is full, it automatically frees up slots occupied by tools this file doesn\\'t need - you\\'ll be asked to confirm before anything is cleared. You can also click any tool\\'s Slot value directly at any time, including after auto-assign has run, to manually assign or reassign it. Once every tool is in the library and has a slot, "Load" becomes enabled.'
             },
             green: {
               color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready',
-              msg: 'Every tool is in the library and assigned to a slot. Click "Load" to translate and run this file.',
-              details: 'All tools referenced in this file are in your ncSender Tool Library and have a magazine slot assigned. Clicking "Load" rewrites this file\\'s tool references to match your actual slot assignments (for example, T18 M06 becomes T3 M06) and reloads the translated file, so the ATC moves to the correct physical position during the job. If you\\'d still like to change a tool\\'s slot assignment, click its Slot value in the table - you can do this at any time, including right now before clicking Load.'
             }
           };
           const s = currentStatus();
@@ -679,21 +729,10 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           banner.style.color = c.color;
           document.getElementById('swIcon').textContent = c.icon;
           document.getElementById('swTitle').textContent = c.title;
-          document.getElementById('swMessageSummary').textContent = c.msg;
-          document.getElementById('swMessageDetails').textContent = c.details;
 
           document.getElementById('prepareBtn').disabled = !s.hasPrepareWork;
           document.getElementById('mapBtn').disabled = !s.allReady;
         }
-
-        // === Collapsible instructions toggle ===
-        document.getElementById('swMessageToggle').addEventListener('click', function() {
-          const details = document.getElementById('swMessageDetails');
-          const toggle = document.getElementById('swMessageToggle');
-          const isHidden = details.style.display === 'none';
-          details.style.display = isHidden ? 'block' : 'none';
-          toggle.innerHTML = isHidden ? 'Hide details &#9652;' : 'Show details &#9662;';
-        });
 
         // === Slot selector popup (adapted from Dynamic Tool Slot Mapper) ===
 
@@ -834,6 +873,21 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             const idx = parseInt(slotCell.getAttribute('data-slot-idx'), 10);
             const row = rows[idx];
             if (row) showSlotSelector(row, e);
+            return;
+          }
+
+          const arrow = e.target.closest('.wear-arrow');
+          if (arrow) {
+            const idx = arrow.getAttribute('data-tool-idx');
+            const dir = parseFloat(arrow.getAttribute('data-dir'));
+            const input = arrow.closest('.wear-stepper').querySelector('.wear-input');
+            const current = parseFloat(input.value);
+            const base = isNaN(current) ? 0 : current;
+            // Round through integer cents to avoid floating point artifacts
+            // (e.g. 0.1 + 0.01 = 0.10999999999999999 in raw JS math).
+            let next = Math.round((base * 100) + (dir * 1)) / 100;
+            next = Math.max(0, Math.min(9.99, next));
+            input.value = next.toFixed(2);
           }
         });
 
@@ -1044,7 +1098,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const assignResult = await autoAssignSlots();
           await refreshFromServer();
 
-          prepareBtn.textContent = 'Add Tools & Auto-Assign Slots';
+          prepareBtn.textContent = 'Add & Assign';
 
           const totalFailures = addResult.failures + conflictResult.failures + (assignResult ? assignResult.failures : 0);
           const firstError = addResult.firstError || conflictResult.firstError || (assignResult && assignResult.firstError);
@@ -1153,7 +1207,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'map' } }, '*');
           } catch (err) {
             mapBtn.disabled = false; prepareBtn.disabled = !currentStatus().hasPrepareWork; bypassBtn.disabled = false;
-            mapBtn.textContent = 'Load';
+            mapBtn.textContent = 'Apply';
             alert('Translation failed: ' + (err && err.message ? err.message : err));
           }
         });
