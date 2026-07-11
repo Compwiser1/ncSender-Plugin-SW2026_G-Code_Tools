@@ -1995,7 +1995,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // every skip is reported by name with a reason.
         function applyRadialAndZOffsets(fileContent, opOffsets) {
           const warnings = [];
-          const notes = [];
+          const lineNotes = {};
           const rewrites = {};
           const insertions = [];
           const zShiftLines = {};
@@ -2014,6 +2014,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const xyValue = offset.xy;
             if (!xyValue) return;
 
+            const noteText = 'TWC Applied - ' + (op.twcDirection === 'internal' ? 'Internal' : 'External') + ' ' + xyValue.toFixed(2);
+
             if (!op.twcDirection) {
               warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): has an X & Y Offset entered but its Notes don\\'t say "internal" or "external" - nothing was changed for this operation.');
               return;
@@ -2024,8 +2026,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): no cuttable geometry found - nothing was changed.');
               return;
             }
-
-            let anyApplied = false;
 
             // Pass 1: extract every genuine closed circle, regardless of
             // what else it's contiguous with (a stepped counterbore
@@ -2074,6 +2074,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 r.iVal = cls.center.x - newStartX;
                 r.jVal = cls.center.y - newStartY;
                 rewrites[li] = r;
+                lineNotes[li] = noteText;
               });
 
               moves.forEach(function(m) {
@@ -2094,9 +2095,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 if (m.hasX) r.x = nx;
                 if (m.hasY) r.y = ny;
                 rewrites[m.lineIndex] = r;
+                lineNotes[m.lineIndex] = noteText;
               });
-
-              if (!localFailed) anyApplied = true;
             });
 
             // Pass 2: whatever wasn't consumed by a circle is either a
@@ -2153,28 +2153,15 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                   r.jVal = el.center.y - el.start.y;
                 }
                 rewrites[chain[i].lineIndex] = r;
+                lineNotes[chain[i].lineIndex] = noteText;
               }
               result.insertions.forEach(function(ins) {
-                insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element) });
+                insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element) + ' (' + noteText + ')' });
               });
-
-              anyApplied = true;
             });
-
-            if (anyApplied) {
-              notes.push({
-                afterLineIndex: op.startLine,
-                text: 'TWC Applied - ' + (op.twcDirection === 'internal' ? 'Internal' : 'External') + ' ' + xyValue.toFixed(2)
-              });
-            }
           });
 
           const lines = fileContent.split(/\\r?\\n/);
-          const notesByLine = {};
-          notes.forEach(function(n) {
-            if (!notesByLine[n.afterLineIndex]) notesByLine[n.afterLineIndex] = [];
-            notesByLine[n.afterLineIndex].push(n.text);
-          });
           const insertionsByLine = {};
           insertions.forEach(function(ins) {
             if (!insertionsByLine[ins.afterLineIndex]) insertionsByLine[ins.afterLineIndex] = [];
@@ -2217,12 +2204,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                   return pre + 'J' + (Math.round(rw.jVal * 10000) / 10000);
                 });
               }
+              if (lineNotes[i]) {
+                line = line + ' (' + lineNotes[i] + ')';
+              }
             }
 
             outLines.push(line);
-            if (notesByLine[i]) {
-              notesByLine[i].forEach(function(t) { outLines.push('( ' + t + ' )'); });
-            }
             if (insertionsByLine[i]) {
               insertionsByLine[i].forEach(function(t) { outLines.push(t); });
             }
