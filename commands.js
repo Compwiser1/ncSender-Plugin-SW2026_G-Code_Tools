@@ -720,7 +720,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // the user clicked, so the header and the button that produced
         // that state can never drift out of sync with each other.
         const TOOL_BADGE_LABELS = { ready: 'Tools Organized', skipped: "I Didn't Need This" };
-        const OP_BADGE_LABELS = { ready: 'Safety Net Applied', skipped: 'Living On The Edge' };
+        const OP_BADGE_LABELS = { ready: 'Offsets Applied', skipped: 'Living On The Edge' };
+        // Hazard symbol for Tool Manager's skipped state.
+        const TOOL_BADGE_ICONS = { skipped: '\\u26A0\\uFE0F' };
         // Caution/warning icon for Operation Manager's skipped state - a
         // better fit for "Living On The Edge" than the generic skip icon.
         const OP_BADGE_ICONS = { skipped: '\\u26A0\\uFE0F' };
@@ -744,7 +746,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
         function setToolSectionState(state) {
           toolSectionState = state;
-          applySectionBadge('toolSectionBadge', state, TOOL_BADGE_LABELS[state]);
+          applySectionBadge('toolSectionBadge', state, TOOL_BADGE_LABELS[state], TOOL_BADGE_ICONS[state]);
           if (state !== 'pending') setSectionCollapsed('toolSectionBody', 'toolSectionHeader', true);
           document.getElementById('organizeBtn').disabled = (state === 'ready');
           updateLifeButton();

@@ -1,3 +1,8 @@
+## v1.13.14 (EXPERIMENTAL — offset terminology + hazard icon)
+
+- **Operation Manager's ready badge renamed** from "Safety Net Applied" to "Offsets Applied", matching the "Apply Offset" button and offset terminology introduced in v1.13.13.
+- **"I Didn't Need This" (Tool Manager's skipped state) now shows a hazard/warning icon (⚠️)** instead of the generic skip icon.
+
 ## v1.13.13 (EXPERIMENTAL — bigger/aligned icons, offset terminology)
 
 - **All icons throughout the plugin are larger and vertically centered against their text**: section icons (🧰/🛡️), status badge icons, the stat-summary bullet dots, and the lightning bolt on "Bring This G-Code To Life!" (now its own aligned element instead of plain inline text).
