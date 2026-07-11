@@ -1,3 +1,8 @@
+## v1.13.5 (EXPERIMENTAL — badge wording + header alignment)
+
+- **Operation Manager's skipped badge now reads "Live On The Edge"** instead of "Skipped", matching the button that produces that state. Tool Manager's skipped badge is unchanged and still reads "Skipped".
+- **All Operation Manager table column headers are now center-aligned** (Operation and Tool Description were previously left-aligned; the body cell content itself still wraps naturally, only the header labels changed).
+
 ## v1.13.4 (EXPERIMENTAL — header summary stats)
 
 - **TOOL MANAGER header now shows a stats line**: total tool count plus a color-coded status breakdown - 🟢 In Sync, 🟠 New, 🔴 Conflict - using the same colors as each row's status badge, so you can tell whether Organize My Tools has real work to do without expanding the section.

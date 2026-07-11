@@ -645,9 +645,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             <thead>
               <tr>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
-                <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
-                <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
               </tr>
@@ -720,11 +720,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           skipped: { cls: 'red',    icon: '\\u23ED\\uFE0F', label: 'Skipped' }
         };
 
-        function applySectionBadge(badgeId, state) {
+        function applySectionBadge(badgeId, state, labelOverride) {
           const b = SECTION_BADGES[state];
           const el = document.getElementById(badgeId);
           el.className = 'row-status-badge row-status-badge--' + b.cls + ' sw-section-badge';
-          el.innerHTML = '<span class="sw-badge-icon">' + b.icon + '</span>' + b.label;
+          el.innerHTML = '<span class="sw-badge-icon">' + b.icon + '</span>' + (labelOverride || b.label);
         }
 
         function setSectionCollapsed(bodyId, headerId, collapsed) {
@@ -746,7 +746,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
         function setOpSectionState(state) {
           opSectionState = state;
-          applySectionBadge('opSectionBadge', state);
+          // Operation Manager's skipped state reads "Live On The Edge"
+          // (matching the button that produces it) instead of "Skipped".
+          applySectionBadge('opSectionBadge', state, state === 'skipped' ? 'Live On The Edge' : null);
           if (state !== 'pending') setSectionCollapsed('opSectionBody', 'opSectionHeader', true);
           updateLifeButton();
         }
