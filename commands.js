@@ -2014,7 +2014,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const xyValue = offset.xy;
             if (!xyValue) return;
 
-            const noteText = 'TWC Applied - ' + (op.twcDirection === 'internal' ? 'Internal' : 'External') + ' ' + xyValue.toFixed(2);
+            const noteText = 'TWC: ' + xyValue.toFixed(2);
 
             if (!op.twcDirection) {
               warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): has an X & Y Offset entered but its Notes don\\'t say "internal" or "external" - nothing was changed for this operation.');

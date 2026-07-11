@@ -1,3 +1,7 @@
+## v1.15.2 (EXPERIMENTAL — shorter per-line notes)
+
+**Per-line notes shortened** from `(TWC Applied - Internal -0.10)` to `(TWC: -0.10)`.
+
 ## v1.15.1 (EXPERIMENTAL — per-line notes)
 
 **Switched from one summary note per operation back to a note on every changed line** (the original request from before Stage 1/2 were scoped) - each G-code line that actually gets shifted, and any newly inserted corner-fillet line, now gets its own trailing `(TWC Applied - Internal -0.10)`-style comment appended directly on that line. Lines that weren't touched by the X & Y offset (including a Z-only shift with no XY change on that same line) stay clean with no note. Verified against both Bearing Bore (simple circle) and Outside Profile (general contour with an inserted fillet), confirming the note appears correctly on every rewritten and inserted line.
