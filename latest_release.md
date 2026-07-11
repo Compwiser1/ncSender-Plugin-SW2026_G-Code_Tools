@@ -1,3 +1,9 @@
+## v1.13.10 (EXPERIMENTAL — reverted row height, removed program name, inline stats)
+
+- **Reverted v1.13.9's row-height reduction** - the tools table already scrolls independently, so shrinking rows didn't address the real constraint, which is the magazine carousel image driving the section's overall visible height, not the table. Rows are back to 64px.
+- **Removed the "Program Name" header entirely** from the top of the dialog.
+- **Tool Manager's stats moved onto the same line as the header text**, centered in the space between the section title and the status badge, instead of sitting on their own line underneath. Operation Manager's stats are unchanged (still on their own line below the title).
+
 ## v1.13.9 (EXPERIMENTAL — real fix for "more visible without scrolling")
 
 - **Tool Manager's table rows are now 44px tall instead of 64px.** The 64px height was leftover from when each row had its own wear-comp stepper control (which needed the extra vertical room) - that column moved to Operation Manager back in v1.13.0, but the row height was never reduced afterward. With rows this much shorter, roughly 4-5 more tools are visible before the table needs to scroll internally, for a typical 8-slot magazine.

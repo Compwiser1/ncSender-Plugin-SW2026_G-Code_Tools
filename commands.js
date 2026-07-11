@@ -385,16 +385,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin: 0 auto;
         box-sizing: border-box;
       }
-      .sw-header {
-        display: flex; align-items: center; justify-content: space-between;
-        flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
-      }
-      .sw-progname-block { text-align: left; flex: 1 1 auto; min-width: 0; }
-      .sw-progname-label {
-        font-size: 1rem; font-weight: 700;
-        color: var(--color-text-primary, #e0e0e0);
-      }
-      .sw-filename { color: var(--color-text-secondary, #ccc); font-size: 0.9rem; word-break: break-all; }
 
       .sw-section {
         border: 1px solid var(--color-border, #3a3f45);
@@ -413,6 +403,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         display: flex; align-items: center; gap: 10px;
         font-size: 1.02rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.02em;
+        flex-shrink: 0;
       }
       .sw-section-stats {
         font-size: 0.78rem; font-weight: 400; font-style: normal;
@@ -420,6 +411,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         color: var(--color-text-secondary, #999);
         margin-left: 60px;
         white-space: nowrap;
+      }
+      .sw-section-stats--inline {
+        flex: 1 1 auto;
+        margin-left: 0;
+        text-align: center;
       }
       .stat-dot { font-size: 0.7rem; vertical-align: 1px; }
       .sw-chevron {
@@ -431,7 +427,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         touch-action: manipulation;
       }
       .sw-section-icon { font-size: 1.05rem; line-height: 1; }
-      .sw-section-badge { display: inline-flex; align-items: center; gap: 6px; }
+      .sw-section-badge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
       .sw-badge-icon { font-size: 0.9em; line-height: 1; }
       .sw-section-body { padding: 4px 16px 16px; }
       .sw-section-actions {
@@ -576,22 +572,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
     </style>
 
     <div class="sw-container">
-      <div class="sw-header">
-        <div class="sw-progname-block">
-          <span class="sw-progname-label">Program Name: </span><span class="sw-filename">${filename || 'G-Code File'}</span>
-        </div>
-      </div>
-
       <div class="sw-section" id="toolSection">
         <div class="sw-section-header" id="toolSectionHeader">
-          <div class="sw-section-title-block">
-            <div class="sw-section-title">
-              <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
-              <span class="sw-section-icon">&#129520;</span>
-              <span>Tool Manager</span>
-            </div>
-            <div class="sw-section-stats" id="toolSectionStats"></div>
+          <div class="sw-section-title">
+            <span class="sw-chevron" style="transform: rotate(-90deg);">&#9660;</span>
+            <span class="sw-section-icon">&#129520;</span>
+            <span>Tool Manager</span>
           </div>
+          <div class="sw-section-stats sw-section-stats--inline" id="toolSectionStats"></div>
           <span class="row-status-badge row-status-badge--orange sw-section-badge" id="toolSectionBadge">
             <span class="sw-badge-icon">&#8987;</span>In progress...
           </span>
@@ -969,7 +957,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               slotCell = '<span class="slot-cell slot-cell-placeholder" data-slot-idx="' + idx + '">Assign</span>';
             }
 
-            return '<tr style="height:44px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
+            return '<tr style="height:64px;"><td class="col-toolnum tool-num">' + r.toolNumber + '</td><td class="gcode-cell">' + gcodeCell + '</td><td class="col-status">' + syncCell + '</td><td class="col-slot">' + slotCell + '</td></tr>';
           }).join('');
         }
 
