@@ -365,15 +365,15 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         border-radius: 5px 0 0 5px; color: var(--color-text-primary, #e0e0e0);
         padding: 3px 4px;
       }
-      .wear-stepper { display: inline-flex; align-items: stretch; vertical-align: middle; }
-      .wear-arrows { display: flex; flex-direction: column; }
+      .wear-stepper { display: inline-flex; align-items: center; vertical-align: middle; }
+      .wear-arrows { display: flex; flex-direction: column; height: 28px; }
       .wear-arrow {
-        width: 1.4em; flex: 1;
+        width: 18px; height: 14px; flex: none;
         background: var(--color-surface-muted, #1a1a1a);
         border: 1px solid var(--color-border, #444);
         border-left: none;
         color: var(--color-text-secondary, #999);
-        font-size: 0.6rem; line-height: 1; cursor: pointer; padding: 0;
+        font-size: 8px; line-height: 1; cursor: pointer; padding: 0;
       }
       .wear-arrow-up { border-radius: 0 5px 0 0; border-bottom: none; }
       .wear-arrow-down { border-radius: 0 0 5px 0; }
@@ -402,16 +402,16 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
       .btn-secondary:hover { background: var(--color-border, #444); }
       .btn-glow-green {
-        background: rgba(40,167,69,0.2); color: #28a745; border: 1px solid #28a745;
+        background: #1a4d2e; color: #ffffff; border: 1px solid #28a745;
         box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
       }
-      .btn-glow-green:hover:not(:disabled) { background: rgba(40,167,69,0.32); }
+      .btn-glow-green:hover:not(:disabled) { background: #216339; }
       .btn-glow-green:disabled { box-shadow: none; }
       .btn-glow-red {
-        background: rgba(220,53,69,0.2); color: #dc3545; border: 1px solid #dc3545;
+        background: #5a1a22; color: #ffffff; border: 1px solid #dc3545;
         box-shadow: 0 0 10px 1px rgba(220,53,69,0.55);
       }
-      .btn-glow-red:hover:not(:disabled) { background: rgba(220,53,69,0.32); }
+      .btn-glow-red:hover:not(:disabled) { background: #712530; }
       .btn-glow-red:disabled { box-shadow: none; }
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
@@ -607,7 +607,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           for (let i = 1; i <= n; i++) {
             const cy = topCy + (n - i) * PITCH; // slot n at top, slot 1 at bottom
-            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#2c2e30" stroke="#55585c" stroke-width="1"/>';
+            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#2c2e30"/>';
             // No bezel ring - it read as an unwanted visible internal line between the casing and the tool circle.
 
             const occ = bySlot[i];
@@ -634,7 +634,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
           }
 
-          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#2c2e30" stroke="#55585c" stroke-width="1"/>' +
+          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#2c2e30"/>' +
             '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
             '<text x="' + DIGIT_X + '" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 

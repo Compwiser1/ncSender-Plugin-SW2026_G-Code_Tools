@@ -1,3 +1,9 @@
+## v1.9.1
+
+- **Fix: crescent-shaped light gray artifacts at every slot overlap.** The visible edge stroke added in v1.9.0 (to fix casing edge visibility against the background) had an unintended side effect: since the casing is built from overlapping circles, each circle's own stroke crossed through its neighbor's fill at the overlap boundary, creating lens-shaped crescent lines exactly where two slots meet. Removed the stroke entirely - the solid `#2c2e30` fill already has enough contrast against the app's background on its own, so no stroke is needed.
+- **Fix: Tool Wear Compensation stepper arrows still oversized.** Previous sizing used relative `em`/`rem` units that scaled unpredictably against their parent context. Rebuilt with explicit fixed pixel dimensions (18×14px per arrow) sized to match the Slot dropdown's visual footprint, independent of any inherited font-size.
+- **Fix: button colors rendering incorrectly.** "Add & Assign," "Apply," and "Bypass" used low-opacity (20%) color overlays that composited unpredictably against the real dialog's background, showing up as a generic teal/gray rather than clearly green or red. Switched to solid, explicit background colors for both the green and red button variants.
+
 ## v1.9.0
 
 **Fixes found from real ncSender screenshots, not previews** — the standalone HTML previews used during v1.8.0's design phase didn't reliably represent how this actually rendered in the live app, so this version was built and verified against real screenshots instead.
