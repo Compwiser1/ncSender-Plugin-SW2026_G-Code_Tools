@@ -1,3 +1,8 @@
+## v1.13.6 (EXPERIMENTAL — badge/button alignment + height fix)
+
+- **Both section headers now always show the exact button text that was clicked**, instead of generic "Ready to go!"/"Skipped" wording: Tool Manager reads "Organize My Tools" or "I Don't Need This"; Operation Manager reads "Apply My Safety Net" or "Live On The Edge". Header and button can no longer drift out of sync with each other since the badge text is driven directly from the same label.
+- **Reserved extra vertical space in the dialog equal to Tool Manager's action-button row height**, so the button row has consistent room regardless of which section happens to be expanded or collapsed.
+
 ## v1.13.5 (EXPERIMENTAL — badge wording + header alignment)
 
 - **Operation Manager's skipped badge now reads "Live On The Edge"** instead of "Skipped", matching the button that produces that state. Tool Manager's skipped badge is unchanged and still reads "Skipped".

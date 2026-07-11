@@ -379,7 +379,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .sw-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: var(--color-text-primary, #e0e0e0);
-        padding: 14px 18px;
+        padding: 14px 18px 68px;
         width: 1180px;
         max-width: 1180px;
         margin: 0 auto;
@@ -720,6 +720,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           skipped: { cls: 'red',    icon: '\\u23ED\\uFE0F', label: 'Skipped' }
         };
 
+        // Ready/Skipped badge text always mirrors the exact button label
+        // the user clicked, so the header and the button that produced
+        // that state can never drift out of sync with each other.
+        const TOOL_BADGE_LABELS = { ready: 'Organize My Tools', skipped: "I Don't Need This" };
+        const OP_BADGE_LABELS = { ready: 'Apply My Safety Net', skipped: 'Live On The Edge' };
+
         function applySectionBadge(badgeId, state, labelOverride) {
           const b = SECTION_BADGES[state];
           const el = document.getElementById(badgeId);
@@ -739,16 +745,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
         function setToolSectionState(state) {
           toolSectionState = state;
-          applySectionBadge('toolSectionBadge', state);
+          applySectionBadge('toolSectionBadge', state, TOOL_BADGE_LABELS[state]);
           if (state !== 'pending') setSectionCollapsed('toolSectionBody', 'toolSectionHeader', true);
           updateLifeButton();
         }
 
         function setOpSectionState(state) {
           opSectionState = state;
-          // Operation Manager's skipped state reads "Live On The Edge"
-          // (matching the button that produces it) instead of "Skipped".
-          applySectionBadge('opSectionBadge', state, state === 'skipped' ? 'Live On The Edge' : null);
+          applySectionBadge('opSectionBadge', state, OP_BADGE_LABELS[state]);
           if (state !== 'pending') setSectionCollapsed('opSectionBody', 'opSectionHeader', true);
           updateLifeButton();
         }
