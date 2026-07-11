@@ -1,3 +1,14 @@
+## v1.10.4
+
+- **Clarification fix: Tool Wear Compensation arrow glyphs enlarged, touch target left unchanged.** The previous version grew the invisible tap area again, which wasn't what was wanted - the actual touch target size from v1.10.2/3 was correct, it just looked disproportionate because the visible arrow glyph was tiny inside it. Font size increased from 0.85rem to 1.5rem so the arrow visually fills the same-sized touch target instead of floating small inside it.
+
+## v1.10.3
+
+- **Fix: action buttons only showed their color on hover, not by default.** Same root cause as the wear-arrow bug from v1.10.1 - ncSender appears to apply its own global button styling that our default-state CSS rules weren't specific enough to beat, while the `:hover` rules happened to be specific enough to win. Added `!important` to the color-critical properties on all three button styles so they display correctly in their normal state, not just on hover.
+- **"Add & Assign" changed from green to orange**, matching the "New" status color it acts on.
+- **Tool Wear Compensation stepper touch targets enlarged again** - wider and taller padding around the same small arrow glyphs.
+- **Fix: "TLS" label was clipped on the left.** It's 3 characters wide, but was center-anchored at the same narrow point used for the single-digit slot numbers - fine for "1"-"8", but "TLS" is wide enough that centering it there pushed its left edge past the canvas boundary. Switched to left-anchored text at a small fixed margin, the same technique that fixed an earlier header-clipping bug.
+
 ## v1.10.2
 
 - **Tool Wear Compensation stepper made touch-friendly.** The span-based fix in v1.10.1 got the visual size right, but the actual clickable area was still tiny (matching the small glyph exactly). Added generous invisible padding around each arrow (~30px tap target instead of ~14px) plus `touch-action: manipulation` to remove tap delay on touchscreens - the arrow glyphs themselves stay the same small size, only the tappable area grew.

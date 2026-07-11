@@ -365,14 +365,14 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
         border-radius: 5px; color: var(--color-text-primary, #e0e0e0);
         padding: 0 4px; height: 32px; box-sizing: border-box;
       }
-      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 56px; }
-      .wear-arrows { display: flex; flex-direction: column; justify-content: center; height: 56px; }
+      .wear-stepper { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; height: 62px; }
+      .wear-arrows { display: flex; flex-direction: column; justify-content: center; height: 62px; }
       .wear-arrow {
         display: flex; align-items: center; justify-content: center;
         background: transparent; border: none; margin: 0;
-        padding: 10px 10px; box-sizing: border-box;
+        padding: 14px 18px; box-sizing: border-box;
         color: var(--color-text-secondary, #999);
-        font-size: 0.85rem; line-height: 0.9; cursor: pointer; user-select: none;
+        font-size: 1.5rem; line-height: 0.9; cursor: pointer; user-select: none;
         touch-action: manipulation;
       }
       .wear-arrow:hover { color: var(--color-accent, #1abc9c); }
@@ -401,21 +401,21 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .btn-secondary { background: var(--color-surface-muted, #2a2a2a); color: var(--color-text-primary); border: 1px solid var(--color-border, #444); }
       .btn-secondary:hover { background: var(--color-border, #444); }
       .btn-glow-green {
-        background: #1a4d2e; color: #ffffff; border: 1px solid #28a745;
-        box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
+        background: #1a4d2e !important; color: #ffffff !important; border: 1px solid #28a745 !important;
+        box-shadow: 0 0 10px 1px rgba(40,167,69,0.55) !important;
       }
-      .btn-glow-green:hover:not(:disabled) { background: #216339; }
+      .btn-glow-green:hover:not(:disabled) { background: #216339 !important; }
       .btn-glow-red {
-        background: #5a1a22; color: #ffffff; border: 1px solid #dc3545;
-        box-shadow: 0 0 10px 1px rgba(220,53,69,0.55);
+        background: #5a1a22 !important; color: #ffffff !important; border: 1px solid #dc3545 !important;
+        box-shadow: 0 0 10px 1px rgba(220,53,69,0.55) !important;
       }
-      .btn-glow-red:hover:not(:disabled) { background: #712530; }
-      .btn-badge-green {
-        background: rgba(40,167,69,0.2); color: #28a745; border: 1px solid #28a745;
-        box-shadow: 0 0 10px 1px rgba(40,167,69,0.55);
+      .btn-glow-red:hover:not(:disabled) { background: #712530 !important; }
+      .btn-glow-red:disabled { box-shadow: none !important; }
+      .btn-badge-orange {
+        background: rgba(249,115,22,0.2) !important; color: #f97316 !important; border: 1px solid #f97316 !important;
+        box-shadow: 0 0 10px 1px rgba(249,115,22,0.55) !important;
       }
-      .btn-badge-green:hover:not(:disabled) { background: rgba(40,167,69,0.32); }
-      .btn-glow-red:disabled { box-shadow: none; }
+      .btn-badge-orange:hover:not(:disabled) { background: rgba(249,115,22,0.32) !important; }
       .slot-cell {
         cursor: pointer; user-select: none; font-weight: 700;
         display: inline-flex; align-items: center; gap: 5px;
@@ -485,7 +485,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       </div>
 
       <div class="actions">
-        <button id="prepareBtn" class="btn btn-badge-green" disabled>Add &amp; Assign</button>
+        <button id="prepareBtn" class="btn btn-badge-orange" disabled>Add &amp; Assign</button>
         <button id="mapBtn" class="btn btn-glow-green" disabled>Apply</button>
         <button id="bypassBtn" class="btn btn-glow-red">Bypass</button>
       </div>
@@ -651,7 +651,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           const capRect = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#0e1113"/>';
           const capExtras = '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
-            '<text x="' + DIGIT_X + '" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
+            '<text x="2" y="' + tlsY + '" text-anchor="start" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
           carousel.innerHTML = '<svg width="' + SVG_W + '" height="' + svgH + '" viewBox="0 0 ' + SVG_W + ' ' + svgH + '" style="flex-shrink:0; display:block; margin-left:8px;">' +
             defs + '<g filter="url(#outerOutline)">' + bulges + capRect + '</g>' + capExtras + bezels + inner + digits + '</svg>';
