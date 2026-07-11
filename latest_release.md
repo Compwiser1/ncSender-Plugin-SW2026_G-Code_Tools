@@ -1,3 +1,15 @@
+## v1.13.1 (EXPERIMENTAL — layout tweaks from first live test)
+
+Follow-up fixes to the v1.13.0 two-section layout based on initial feedback:
+
+- **"I Don't Need This" and "Living On The Edge"** now match "Apply My Safety Net"'s solid glow styling, just red instead of green - consistent visual weight for the skip choice, not an outlined/quiet look.
+- **"Skipped" badge is now the same size** as "Ready to go!" and "In progress..." - it was rendering smaller before since the gray badge variant was missing the font-size/padding the other two had.
+- **"Apply My Safety Net" starts grayed out** and only lights up green once at least one Z Comp or X&Y Comp value anywhere in the section is non-zero - it re-grays if you zero everything back out.
+- **New "Tool Description" column in Operation management**, placed right after Tool #, showing the same tool-type/diameter/description text as Tool management's column for that tool number - both sections now describe a tool identically.
+- **Renamed "Program Tool Information" to "Tool Description"** in Tool management for consistency with the new Operation management column.
+- **Section expand/collapse arrows are now touch-friendly** - enlarged to the same glyph size and tap-target padding as the Z/X&Y Comp stepper arrows, instead of a small fixed-size caret.
+- **Tool management now auto-marks itself "Ready to go!"** on load if every tool is already In Sync and every slot is already assigned - no need to click Organize My Tools just to confirm nothing needs doing.
+
 ## v1.13.0 (EXPERIMENTAL — layout redesign, not final)
 
 **Dialog restructured into two collapsible sections** — a first draft being tested live, expect follow-up tweaks.

@@ -400,9 +400,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         font-size: 1.02rem; font-weight: 700;
       }
       .sw-chevron {
-        display: inline-block; font-size: 0.8rem;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; line-height: 0.9;
+        padding: 2px 14px; box-sizing: border-box;
         color: var(--color-text-secondary, #999);
         transition: transform 0.18s ease;
+        touch-action: manipulation;
       }
       .sw-section-icon { font-size: 1.05rem; line-height: 1; }
       .sw-section-badge { display: inline-flex; align-items: center; gap: 6px; }
@@ -423,11 +426,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         box-shadow: 0 0 10px 1px rgba(61,143,196,0.5) !important;
       }
       .btn-life:not(:disabled):hover { background: #1c4a63 !important; }
-      .btn-skip {
-        background: transparent !important; color: var(--color-text-secondary, #ccc) !important;
-        border: 1px solid var(--color-border, #555) !important;
+      .btn-glow-red {
+        background: #5a1a22 !important; color: #ffffff !important; border: 1px solid #dc3545 !important;
+        box-shadow: 0 0 10px 1px rgba(220,53,69,0.55) !important;
       }
-      .btn-skip:hover:not(:disabled) { background: var(--color-border, #2a2a2a) !important; }
+      .btn-glow-red:hover:not(:disabled) { background: #712530 !important; }
 
       .sw-main {
         display: flex; gap: 0; align-items: stretch;
@@ -494,7 +497,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       }
       .row-status-badge--green { background: rgba(40,167,69,0.2); color: #28a745; border-color: #28a745; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(40,167,69,0.55); }
       .row-status-badge--orange { background: rgba(249,115,22,0.2); color: #f97316; border-color: #f97316; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(249,115,22,0.55); }
-      .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; box-shadow: 0 0 8px 1px rgba(153,153,153,0.4); }
+      .row-status-badge--gray { background: rgba(153,153,153,0.15); color: #999; border-color: #666; font-size: 0.95rem; padding: 4px 10px; box-shadow: 0 0 8px 1px rgba(153,153,153,0.4); }
       .row-status-badge--red { background: rgba(220,53,69,0.2); color: #dc3545; border-color: #dc3545; box-shadow: 0 0 8px 1px rgba(220,53,69,0.55); }
       .status-conflict-wrap { border: 3px solid #dc3545; border-radius: 16px; box-shadow: 0 0 10px 1px rgba(220,53,69,0.55); padding: 6px 8px; margin: -4px -8px; }
       .tool-num { font-weight: 700; }
@@ -579,7 +582,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 <thead>
                   <tr>
                     <th class="col-toolnum">Tool #</th>
-                    <th>Program Tool Information</th>
+                    <th>Tool Description</th>
                     <th class="col-status">Status</th>
                     <th class="col-slot">Slot</th>
                   </tr>
@@ -591,7 +594,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           </div>
           <div class="sw-section-actions">
             <button id="organizeBtn" type="button" class="btn btn-glow-green">Organize My Tools</button>
-            <button id="skipToolsBtn" type="button" class="btn btn-skip">I Don't Need This</button>
+            <button id="skipToolsBtn" type="button" class="btn btn-glow-red">I Don't Need This</button>
           </div>
         </div>
       </div>
@@ -614,6 +617,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Op #</th>
                 <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Operation</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
+                <th style="text-align:left; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Comp</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X&amp;Y Comp</th>
               </tr>
@@ -621,8 +625,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             <tbody id="wcTableBody"></tbody>
           </table>
           <div class="sw-section-actions">
-            <button id="applySafetyBtn" type="button" class="btn btn-glow-green">Apply My Safety Net</button>
-            <button id="livingEdgeBtn" type="button" class="btn btn-skip">Living On The Edge</button>
+            <button id="applySafetyBtn" type="button" class="btn" disabled>Apply My Safety Net</button>
+            <button id="livingEdgeBtn" type="button" class="btn btn-glow-red">Living On The Edge</button>
           </div>
         </div>
       </div>
@@ -843,16 +847,29 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           });
         }
 
+        // Shared "Tool Description" markup - used by both the Tool
+        // management table (Tool Description column) and the Operation
+        // management table (Tool Description column added after Tool #),
+        // so both sections always show identical wording for the same tool.
+        function buildToolDescCell(row) {
+          if (!row) return '\\u2014';
+          const mappedTitled = titleCase(row.mappedType);
+          const rawTitled = titleCase(row.type);
+          const combinedType = (mappedTitled.toLowerCase() === rawTitled.toLowerCase())
+            ? mappedTitled
+            : mappedTitled + ' ' + rawTitled;
+          return '<span class="gc-type">' + escapeHtml(combinedType) + '</span>' +
+            '<span class="gc-detail">' + row.diameter.toFixed(2) + ' mm \\u2014 ' + escapeHtml(row.description) + '</span>';
+        }
+
+        function findRowByToolNumber(toolNumber) {
+          return rows.find(function(r) { return r.toolNumber === toolNumber; });
+        }
+
         function renderTable() {
           const tbody = document.getElementById('toolsTableBody');
           tbody.innerHTML = rows.map(function(r, idx) {
-            const mappedTitled = titleCase(r.mappedType);
-            const rawTitled = titleCase(r.type);
-            const combinedType = (mappedTitled.toLowerCase() === rawTitled.toLowerCase())
-              ? mappedTitled
-              : mappedTitled + ' ' + rawTitled;
-            const gcodeCell = '<span class="gc-type">' + escapeHtml(combinedType) + '</span>' +
-              '<span class="gc-detail">' + r.diameter.toFixed(2) + ' mm \\u2014 ' + escapeHtml(r.description) + '</span>';
+            const gcodeCell = buildToolDescCell(r);
 
             let syncCell = '<span class="row-status-badge row-status-badge--' + r.statusClass + '">' +
               escapeHtml(r.statusLabel) + '</span>';
@@ -1243,10 +1260,24 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               '<td style="padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid var(--color-border, #2a2e33);">' + op.opNumber + '</td>' +
               '<td style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + escapeHtml(op.opName) + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + (op.toolNumber !== null ? op.toolNumber : '\\u2014') + '</td>' +
+              '<td class="gcode-cell" style="padding:8px 10px; border-bottom:1px solid var(--color-border, #2a2e33);">' + buildToolDescCell(findRowByToolNumber(op.toolNumber)) + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + zCell + '</td>' +
               '<td style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--color-border, #2a2e33);">' + xyCell + '</td>' +
               '</tr>';
           }).join('');
+        }
+
+        // === Apply My Safety Net stays grayed out until at least one Z/X&Y
+        // value is non-zero, then lights up green (item 3). ===
+        function updateApplySafetyBtnState() {
+          const btn = document.getElementById('applySafetyBtn');
+          let hasNonZero = false;
+          document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val !== 0) hasNonZero = true;
+          });
+          btn.disabled = !hasNonZero;
+          btn.classList.toggle('btn-glow-green', hasNonZero);
         }
 
         document.getElementById('wcTableBody').addEventListener('click', function(e) {
@@ -1260,6 +1291,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           next = Math.max(-1, Math.min(1, next));
           input.value = next.toFixed(2);
           updateWearInputColor(input);
+          updateApplySafetyBtnState();
         });
 
         document.getElementById('wcTableBody').addEventListener('input', function(e) {
@@ -1270,6 +1302,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             input.value = Math.max(-1, Math.min(1, raw)).toFixed(2);
           }
           updateWearInputColor(input);
+          updateApplySafetyBtnState();
         });
 
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
@@ -1452,6 +1485,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // === Init ===
         renderTable();
         renderWearCompTable();
+        updateApplySafetyBtnState();
+        if (currentStatus().allReady) {
+          setToolSectionState('ready');
+        }
         fetchMagazineSize().then(function(size) {
           magazineSize = size;
           renderCarousel();
