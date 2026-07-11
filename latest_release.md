@@ -1,3 +1,11 @@
+## v1.9.0
+
+**Fixes found from real ncSender screenshots, not previews** — the standalone HTML previews used during v1.8.0's design phase didn't reliably represent how this actually rendered in the live app, so this version was built and verified against real screenshots instead.
+
+- **Removed the bezel ring entirely.** Every slot previously had a light gray ring (between the dark casing and the tool circle) that was meant to look like a bezel but actually just read as an unwanted visible internal line running through the whole magazine graphic. Gone now — casing sits directly behind the tool circle with nothing in between.
+- **Casing is now a single solid dark gray** (`#2c2e30`) with a thin visible edge stroke, replacing the earlier left-to-right gradient. The gradient's dark end was nearly invisible against the app's dark background, making the casing's right edge disappear.
+- **Tool Wear Compensation stepper arrows reduced back to their original size** — an earlier "double the size" request made them disproportionately large once seen in the real dialog.
+
 ## v1.8.0
 
 **Dialog redesign — magazine graphic, table layout, and Tool Wear Compensation.**

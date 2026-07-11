@@ -278,15 +278,15 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
   const statusConfig = {
     red: {
       color: '#dc3545', bgColor: 'rgba(220, 53, 69, 0.1)', icon: '🔴',
-      title: 'Tool Library Conflicts Found',
+      title: 'Tool Library Conflicts Found'
     },
     yellow: {
       color: '#ffc107', bgColor: 'rgba(255, 193, 7, 0.1)', icon: '🟡',
-      title: 'Tools Need Attention',
+      title: 'Tools Need Attention'
     },
     green: {
       color: '#28a745', bgColor: 'rgba(40, 167, 69, 0.1)', icon: '🟢',
-      title: 'All Tools Ready',
+      title: 'All Tools Ready'
     }
   };
   const config = statusConfig[status];
@@ -368,12 +368,12 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
       .wear-stepper { display: inline-flex; align-items: stretch; vertical-align: middle; }
       .wear-arrows { display: flex; flex-direction: column; }
       .wear-arrow {
-        width: 2.8em; flex: 1;
+        width: 1.4em; flex: 1;
         background: var(--color-surface-muted, #1a1a1a);
         border: 1px solid var(--color-border, #444);
         border-left: none;
         color: var(--color-text-secondary, #999);
-        font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0;
+        font-size: 0.6rem; line-height: 1; cursor: pointer; padding: 0;
       }
       .wear-arrow-up { border-radius: 0 5px 0 0; border-bottom: none; }
       .wear-arrow-down { border-radius: 0 0 5px 0; }
@@ -543,7 +543,6 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
           const PITCH = Math.round(80 * SCALE);
           const FIRST_CY = Math.round(54 * SCALE);
           const BULGE_R = Math.round(52 * SCALE);
-          const BEZEL_R = Math.round(41 * SCALE);
           const INNER_R = Math.round(35 * SCALE);
           const CAP_GAP = Math.round(42 * SCALE);
           const CAP_H = Math.round(53 * SCALE);
@@ -586,9 +585,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             bySlot[r.pocketNumber] = r;
           });
 
-          let defs = '<defs><linearGradient id="swCaseGrad" x1="0" y1="0" x2="1" y2="0">' +
-            '<stop offset="0%" stop-color="#4a4d50"/><stop offset="45%" stop-color="#383b3e"/><stop offset="100%" stop-color="#222426"/>' +
-            '</linearGradient>' +
+          let defs = '<defs>' +
             '<filter id="glowGreen" x="-60%" y="-60%" width="220%" height="220%">' +
             '<feGaussianBlur stdDeviation="2.5" result="blur"/>' +
             '<feFlood flood-color="#22c55e" flood-opacity="0.9" result="color"/>' +
@@ -610,8 +607,8 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
           for (let i = 1; i <= n; i++) {
             const cy = topCy + (n - i) * PITCH; // slot n at top, slot 1 at bottom
-            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="url(#swCaseGrad)"/>';
-            bezels += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BEZEL_R + '" fill="#6b6f74"/>';
+            bulges += '<circle cx="' + cx + '" cy="' + cy + '" r="' + BULGE_R + '" fill="#2c2e30" stroke="#55585c" stroke-width="1"/>';
+            // No bezel ring - it read as an unwanted visible internal line between the casing and the tool circle.
 
             const occ = bySlot[i];
             let digitColor = '#e8e8e6';
@@ -637,7 +634,7 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
             digits += '<text x="' + DIGIT_X + '" y="' + (cy + DIGIT_DY) + '" text-anchor="middle" font-weight="700" font-size="' + DIGIT_FS + '" fill="' + digitColor + '"' + digitFilter + '>' + i + '</text>';
           }
 
-          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="url(#swCaseGrad)"/>' +
+          const cap = '<rect x="' + (cx - CAP_W / 2) + '" y="' + capTop + '" width="' + CAP_W + '" height="' + CAP_H + '" rx="' + Math.max(4, Math.round(10 * SCALE)) + '" fill="#2c2e30" stroke="#55585c" stroke-width="1"/>' +
             '<circle cx="' + cx + '" cy="' + knobCy + '" r="' + KNOB_R + '" fill="#9a9da1" stroke="#0e1113" stroke-width="2"/>' +
             '<text x="' + DIGIT_X + '" y="' + tlsY + '" text-anchor="middle" font-weight="700" font-size="' + TLS_FS + '" fill="#e8e8e6">TLS</text>';
 
@@ -710,15 +707,9 @@ function showUnifiedDialog(filename, sourcePath, rows, status, toolLibrary) {
 
         function updateBanner() {
           const cfg = {
-            red: {
-              color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found',
-            },
-            yellow: {
-              color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention',
-            },
-            green: {
-              color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready',
-            }
+            red: { color: '#dc3545', bg: 'rgba(220,53,69,0.1)', icon: '🔴', title: 'Tool Library Conflicts Found' },
+            yellow: { color: '#ffc107', bg: 'rgba(255,193,7,0.1)', icon: '🟡', title: 'Tools Need Attention' },
+            green: { color: '#28a745', bg: 'rgba(40,167,69,0.1)', icon: '🟢', title: 'All Tools Ready' }
           };
           const s = currentStatus();
           const c = cfg[s.status];
