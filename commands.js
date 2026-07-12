@@ -786,7 +786,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Offset</th>
-                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X &amp; Y Offset</th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X &amp; Y Offset <span style="cursor:help; opacity:0.75; font-weight:400;" title="This is a RADIUS value, not diameter - the hole/boss's overall size across changes by 2x this amount. Example: entering 0.10 changes the diameter by 0.20mm, not 0.10mm.">&#9432;</span></th>
               </tr>
             </thead>
             <tbody id="wcTableBody"></tbody>
