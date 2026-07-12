@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.16.1 (EXPERIMENTAL layout — see note below)
+**Version**: 1.17.0 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -88,6 +88,12 @@ Unlike pure library maintenance, this dialog opens **every time** a file has too
 
 ### Parsing
 Reads only the footer tool summary table, not the inline `T## M06` calls — the footer table is a clean, structured source that's far less error-prone to parse.
+
+**Supports two post processor output formats side by side, auto-detected per file:**
+- **Original**: parenthesized `( ... )` comments, arcs use `I`/`J` center offsets, operation headers read `( Operation #N: Name )` with `( Notes: ... )` right after.
+- **Current (2026.07.12-C and later)**: semicolon `;` comments throughout, arcs use `R` (radius) instead of `I`/`J`, and operation headers use a 3-line `; Operation Summary` / `; - Description: Name` / `; - Notes: ...` block with no explicit operation number - operations are numbered sequentially in the order they appear instead.
+
+`R`-format arcs are converted to the equivalent center internally using the same formula GRBL itself uses to interpret radius-mode arcs, so the geometry engine works identically regardless of which format a given file uses - and TWC offset output is written back in whichever format the original line used (an `R`-format file gets `R` back, not `I`/`J`).
 
 ### Tool type mapping
 `ENDMILL` → `flat` (or `ball` if "BALL"/"BULLNOSE" appears in the type or description); `DRILL`/`CENTER DRILL` → `drill`; `COUNTERSINK` → `chamfer`. Unrecognized types fall back to `flat` and log a warning.

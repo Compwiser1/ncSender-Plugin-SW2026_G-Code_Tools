@@ -153,24 +153,34 @@ function loadToolLibrary() {
 // spaces, which is what lets a two-word type like "CENTER DRILL" (single
 // internal space) stay intact while still splitting from its neighbors.
 function parseToolTable(content) {
-  const TABLE_ROW_RE = /^\(\s*(\d{2,4})\s{2,}([A-Z][A-Z ]*?)\s{2,}([\d.]+)\s{2,}(.+?)\s*\)\s*$/gm;
+  // Supports both the original parenthesized-comment tool table and the
+  // newer semicolon-comment format (no closing bracket, since ; comments
+  // run to end of line rather than being wrapped in a pair like parens).
+  const TABLE_ROW_RE_PAREN = /^\(\s*(\d{2,4})\s{2,}([A-Z][A-Z ]*?)\s{2,}([\d.]+)\s{2,}(.+?)\s*\)\s*$/gm;
+  const TABLE_ROW_RE_SEMI = /^;\s*(\d{2,4})\s{2,}([A-Z][A-Z ]*?)\s{2,}([\d.]+)\s{2,}(.+?)\s*$/gm;
   const tools = [];
   const seen = {};
-  let m;
-  while ((m = TABLE_ROW_RE.exec(content)) !== null) {
-    const toolNumber = parseInt(m[1], 10);
-    const diameter = parseFloat(m[3]);
-    if (isNaN(toolNumber) || isNaN(diameter) || seen[toolNumber]) continue;
-    seen[toolNumber] = true;
-    const rawType = m[2].trim();
-    tools.push({
-      toolNumber: toolNumber,
-      type: rawType,
-      mappedType: mapToolType(rawType, m[4]),
-      diameter: diameter,
-      description: m[4].trim()
-    });
+
+  function extract(re) {
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      const toolNumber = parseInt(m[1], 10);
+      const diameter = parseFloat(m[3]);
+      if (isNaN(toolNumber) || isNaN(diameter) || seen[toolNumber]) continue;
+      seen[toolNumber] = true;
+      const rawType = m[2].trim();
+      tools.push({
+        toolNumber: toolNumber,
+        type: rawType,
+        mappedType: mapToolType(rawType, m[4]),
+        diameter: diameter,
+        description: m[4].trim()
+      });
+    }
   }
+
+  extract(TABLE_ROW_RE_PAREN);
+  extract(TABLE_ROW_RE_SEMI);
   return tools;
 }
 
@@ -308,13 +318,32 @@ function escapeHtmlServerSide(s) {
 
 function parseOperations(content) {
   const lines = content.split(/\r?\n/);
-  const opPattern = /^\(\s*Operation\s*#(\d+):\s*(.+?)\s*\)\s*$/i;
-  const notesPattern = /^\(\s*Notes:\s*(.*?)\s*\)\s*$/i;
+  // Old format: "( Operation #N: Name )" header, "( Notes: ... )" right after.
+  const opPatternParen = /^\(\s*Operation\s*#(\d+):\s*(.+?)\s*\)\s*$/i;
+  const notesPatternParen = /^\(\s*Notes:\s*(.*?)\s*\)\s*$/i;
+  // New format: semicolon comments, no explicit operation number - a
+  // fixed 3-line block instead ("Operation Summary" label, then
+  // "- Description: Name", then "- Notes: ...").
+  const opSummaryPatternSemi = /^;\s*Operation\s+Summary\s*$/i;
+  const descPatternSemi = /^;\s*-\s*Description:\s*(.+?)\s*$/i;
+  const notesPatternSemi = /^;\s*-\s*Notes:\s*(.*?)\s*$/i;
   const toolChangePattern = /T\s*0*(\d+)\s+M0*6/i;
 
   let currentTool = null;
   const operations = [];
   let currentOp = null;
+
+  function twcDirectionFor(opNotes) {
+    // TWC direction comes only from the words "internal"/"external"
+    // appearing in the Notes text (case-insensitive) - any numeric
+    // suffix (TWC_INTERNAL_1, TWC_External_2, ...) is ignored, since
+    // it's just a tracking label from the CAM process and has no
+    // bearing on which way the offset should push the toolpath.
+    const notesLower = opNotes.toLowerCase();
+    if (notesLower.indexOf('internal') !== -1) return 'internal';
+    if (notesLower.indexOf('external') !== -1) return 'external';
+    return null;
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -322,34 +351,46 @@ function parseOperations(content) {
     const tc = line.match(toolChangePattern);
     if (tc) currentTool = parseInt(tc[1], 10);
 
-    const opMatch = line.match(opPattern);
-    if (opMatch) {
+    const opMatchParen = line.match(opPatternParen);
+    if (opMatchParen) {
       if (currentOp) currentOp.endLine = i - 1;
-      // The post processor always writes a "( Notes: ... )" comment on
-      // the line immediately following the operation header - grab it
-      // here so the dialog can show it under the operation name without
-      // re-parsing the file client-side.
       let opNotes = '';
       if (i + 1 < lines.length) {
-        const notesMatch = lines[i + 1].match(notesPattern);
+        const notesMatch = lines[i + 1].match(notesPatternParen);
         if (notesMatch) opNotes = notesMatch[1];
       }
-      // TWC direction comes only from the words "internal"/"external"
-      // appearing in the Notes text (case-insensitive) - any numeric
-      // suffix (TWC_INTERNAL_1, TWC_External_2, ...) is ignored, since
-      // it's just a tracking label from the CAM process and has no
-      // bearing on which way the offset should push the toolpath.
-      let twcDirection = null;
-      const notesLower = opNotes.toLowerCase();
-      if (notesLower.indexOf('internal') !== -1) twcDirection = 'internal';
-      else if (notesLower.indexOf('external') !== -1) twcDirection = 'external';
       currentOp = {
-        opNumber: parseInt(opMatch[1], 10),
-        opName: opMatch[2],
+        opNumber: parseInt(opMatchParen[1], 10),
+        opName: opMatchParen[2],
         opNotes: opNotes,
-        twcDirection: twcDirection,
+        twcDirection: twcDirectionFor(opNotes),
         toolNumber: currentTool,
         startLine: i + 1,
+        endLine: null
+      };
+      operations.push(currentOp);
+      continue;
+    }
+
+    if (opSummaryPatternSemi.test(line)) {
+      if (currentOp) currentOp.endLine = i - 1;
+      let opName = '';
+      let opNotes = '';
+      if (i + 1 < lines.length) {
+        const descMatch = lines[i + 1].match(descPatternSemi);
+        if (descMatch) opName = descMatch[1];
+      }
+      if (i + 2 < lines.length) {
+        const notesMatch = lines[i + 2].match(notesPatternSemi);
+        if (notesMatch) opNotes = notesMatch[1];
+      }
+      currentOp = {
+        opNumber: operations.length + 1,
+        opName: opName,
+        opNotes: opNotes,
+        twcDirection: twcDirectionFor(opNotes),
+        toolNumber: currentTool,
+        startLine: i + 3,
         endLine: null
       };
       operations.push(currentOp);
@@ -1765,6 +1806,34 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // was last commanded. G91 (incremental) lines update the mode
         // flag only; their coordinates are never trusted or touched,
         // matching the same rule the existing Z-offset transform follows.
+        // Converts a G02/G03 R-format arc (radius mode) to the
+        // equivalent I/J offset (start -> center), using the exact
+        // formula GRBL itself uses internally to interpret R-mode arcs -
+        // this file's own target controller ("SW2026 FrankenOKO GRBL
+        // Metric Mill") - so this matches how the machine actually
+        // resolves it, including which of the two possible centers is
+        // correct (positive R = minor/short arc, negative R = major/
+        // long arc). Returns null if the given radius is too small for
+        // the chord between start and end (geometrically impossible).
+        function twcRadiusToIJ(startX, startY, endX, endY, r, isCW) {
+          const x = endX - startX;
+          const y = endY - startY;
+          const distSq = x * x + y * y;
+          let h_x2_div_d = 4 * r * r - distSq;
+          if (h_x2_div_d < 0) return null;
+          h_x2_div_d = -Math.sqrt(h_x2_div_d) / Math.sqrt(distSq);
+          if (!isCW) h_x2_div_d = -h_x2_div_d;
+          let absR = r;
+          if (absR < 0) {
+            h_x2_div_d = -h_x2_div_d;
+            absR = -absR;
+          }
+          return {
+            iVal: 0.5 * (x - (y * h_x2_div_d)),
+            jVal: 0.5 * (y + (x * h_x2_div_d))
+          };
+        }
+
         function parseFileMoves(fileContent) {
           const lines = fileContent.split(/\\r?\\n/);
           let curX = 0, curY = 0, curZ = 0;
@@ -1774,7 +1843,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            if (/^\\s*\\(/.test(line)) continue;
+            if (/^\\s*[(;]/.test(line)) continue;
             const tokens = line.trim().split(/\\s+/).filter(Boolean);
             if (tokens.length === 0) continue;
 
@@ -1787,8 +1856,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const xVal = twcTokenNumber(tokens, 'X');
             const yVal = twcTokenNumber(tokens, 'Y');
             const zVal = twcTokenNumber(tokens, 'Z');
-            const iVal = twcTokenNumber(tokens, 'I');
-            const jVal = twcTokenNumber(tokens, 'J');
+            let iVal = twcTokenNumber(tokens, 'I');
+            let jVal = twcTokenNumber(tokens, 'J');
+            const rVal = twcTokenNumber(tokens, 'R');
 
             const startX = curX, startY = curY, startZ = curZ;
 
@@ -1796,6 +1866,24 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               if (xVal !== null) curX = xVal;
               if (yVal !== null) curY = yVal;
               if (zVal !== null) curZ = zVal;
+            }
+
+            // R-format arc (this post processor's current convention) -
+            // convert to the equivalent I/J once here so the rest of the
+            // engine (which works entirely in center/radius terms) needs
+            // no further changes. isRFormat + the original signed R are
+            // kept so output-writing can write back R instead of I/J,
+            // preserving the file's own convention.
+            let isRFormat = false;
+            let signedR = null;
+            if (iVal === null && jVal === null && rVal !== null && (motion === 2 || motion === 3)) {
+              const conv = twcRadiusToIJ(startX, startY, curX, curY, rVal, motion === 2);
+              if (conv) {
+                iVal = conv.iVal;
+                jVal = conv.jVal;
+                isRFormat = true;
+                signedR = rVal;
+              }
             }
 
             const hasAny = (xVal !== null || yVal !== null || zVal !== null || iVal !== null || jVal !== null);
@@ -1809,6 +1897,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               x: curX, y: curY, z: curZ,
               hasX: xVal !== null, hasY: yVal !== null,
               iVal: iVal, jVal: jVal,
+              isRFormat: isRFormat, signedR: signedR,
               isArc: (motion === 2 || motion === 3) && (iVal !== null || jVal !== null)
             });
           }
@@ -1840,7 +1929,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               if (Math.abs(r1 - r2) > TWC_EPS) continue;
               elements.push({
                 type: 'arc', start: { x: m.startX, y: m.startY }, end: { x: m.x, y: m.y },
-                center: { x: cx, y: cy }, radius: (r1 + r2) / 2, cw: m.motion === 2, lineIndex: m.lineIndex, z: m.z
+                center: { x: cx, y: cy }, radius: (r1 + r2) / 2, cw: m.motion === 2, lineIndex: m.lineIndex, z: m.z,
+                isRFormat: m.isRFormat, rSign: m.isRFormat ? (m.signedR >= 0 ? 1 : -1) : null
               });
             } else if (m.hasX || m.hasY) {
               elements.push({ type: 'line', start: { x: m.startX, y: m.startY }, end: { x: m.x, y: m.y }, lineIndex: m.lineIndex, z: m.z });
@@ -2098,7 +2188,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const joined = twcJoinCorner(a, b, origVertex, growAmount);
             if (!joined) return { ok: false, kind: 'other', reason: 'a corner in this profile could not be closed cleanly' };
             if (joined.fillet) {
-              insertions.push({ afterLineIndex: chain[aIdx].lineIndex, element: joined.fillet });
+              insertions.push({ afterLineIndex: chain[aIdx].lineIndex, element: joined.fillet, isRFormat: chain[aIdx].isRFormat });
             } else {
               a.end = joined.vertex;
               b.start = joined.vertex;
@@ -2209,11 +2299,15 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           return false;
         }
 
-        function twcArcGcodeLine(el) {
-          const iVal = Math.round((el.center.x - el.start.x) * 10000) / 10000;
-          const jVal = Math.round((el.center.y - el.start.y) * 10000) / 10000;
+        function twcArcGcodeLine(el, useRFormat) {
           const x = Math.round(el.end.x * 10000) / 10000;
           const y = Math.round(el.end.y * 10000) / 10000;
+          if (useRFormat) {
+            const rOut = Math.round(el.radius * 10000) / 10000;
+            return (el.cw ? 'G02' : 'G03') + ' X' + x + ' Y' + y + ' R' + rOut;
+          }
+          const iVal = Math.round((el.center.x - el.start.x) * 10000) / 10000;
+          const jVal = Math.round((el.center.y - el.start.y) * 10000) / 10000;
           return (el.cw ? 'G02' : 'G03') + ' X' + x + ' Y' + y + ' I' + iVal + ' J' + jVal;
         }
 
@@ -2337,6 +2431,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 const newStartY = cls.center.y + (m.startY - cls.center.y) * factor;
                 r.iVal = cls.center.x - newStartX;
                 r.jVal = cls.center.y - newStartY;
+                if (m.isRFormat) {
+                  r.isRFormat = true;
+                  r.rVal = (m.signedR >= 0 ? 1 : -1) * newRadius;
+                }
                 rewrites[li] = r;
                 lineNotes[li] = noteText;
               });
@@ -2431,12 +2529,16 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 if (el.type === 'arc') {
                   r.iVal = el.center.x - el.start.x;
                   r.jVal = el.center.y - el.start.y;
+                  if (chain[i].isRFormat) {
+                    r.isRFormat = true;
+                    r.rVal = chain[i].rSign * el.radius;
+                  }
                 }
                 rewrites[chain[i].lineIndex] = r;
                 lineNotes[chain[i].lineIndex] = noteText;
               }
               result.insertions.forEach(function(ins) {
-                insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element) + ' (' + noteText + ')' });
+                insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element, ins.isRFormat) + ' (' + noteText + ')' });
               });
             });
           });
@@ -2488,7 +2590,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const outLines = [];
           for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
-            const isComment = /^\\s*\\(/.test(line);
+            const isComment = /^\\s*[(;]/.test(line);
 
             const z = zShiftLines[i];
             let zChanged = false;
@@ -2513,15 +2615,21 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                   return pre + 'Y' + (Math.round(rw.y * 10000) / 10000);
                 });
               }
-              if (rw.iVal !== undefined) {
-                line = line.replace(/(^|\\s)I(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
-                  return pre + 'I' + (Math.round(rw.iVal * 10000) / 10000);
+              if (rw.isRFormat && rw.rVal !== undefined) {
+                line = line.replace(/(^|\\s)R(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                  return pre + 'R' + (Math.round(rw.rVal * 10000) / 10000);
                 });
-              }
-              if (rw.jVal !== undefined) {
-                line = line.replace(/(^|\\s)J(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
-                  return pre + 'J' + (Math.round(rw.jVal * 10000) / 10000);
-                });
+              } else {
+                if (rw.iVal !== undefined) {
+                  line = line.replace(/(^|\\s)I(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                    return pre + 'I' + (Math.round(rw.iVal * 10000) / 10000);
+                  });
+                }
+                if (rw.jVal !== undefined) {
+                  line = line.replace(/(^|\\s)J(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/, function(match, pre) {
+                    return pre + 'J' + (Math.round(rw.jVal * 10000) / 10000);
+                  });
+                }
               }
               if (lineNotes[i]) {
                 line = line + ' (' + lineNotes[i] + ')';
