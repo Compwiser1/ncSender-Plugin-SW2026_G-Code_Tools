@@ -1,6 +1,6 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.19.0 (EXPERIMENTAL layout — see note below)
+**Version**: 1.19.1 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
@@ -45,7 +45,7 @@ Once a tool is in the library, click its **Slot** badge to open a picker and ass
 **Organize My Tools** handles all of this at once: adds every new tool to the library, auto-resolves conflicts, and fills every unassigned slot. If the magazine doesn't have enough empty slots, tools occupying a slot but not used anywhere in this file are evicted (cleared from their slot, not deleted from the library) to make room — you'll see exactly what will be evicted and have to confirm before anything happens. Tools this file actually needs are never evicted.
 
 ### 2. Operation Manager — Tool Wear Compensation
-Lists every **operation** in the file (not every tool), each with independent **Z Offset** and **X & Y Offset** values (-1.00 to 1.00). **Apply Offset** locks in whatever values you've entered; **Live On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless.
+Lists every **operation** in the file (not every tool), each with independent **Z Offset** and **X & Y Offset** values (-1.00 to 1.00). **Apply Offset** locks in whatever values you've entered; **Live On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless. **Z Offset only shifts real feed moves (G01/G02/G03)** - a G00 rapid retract or reposition (like a clearance height between passes) isn't cutting anything, so it's never shifted.
 
 **X & Y Offset actually reshapes real bores, bosses, and outer profiles.** Direction comes from the operation's `( Notes: ... )` comment - "internal" (a bore) or "external" (a boss/outer boundary); any numeric suffix like `TWC_Internal_3` is ignored. A **negative** value always means "remove more material" and a **positive** value always means "keep more material," regardless of internal/external:
 - **Internal (bore):** negative → hole gets bigger; positive → hole gets smaller/tighter.

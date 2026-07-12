@@ -2440,7 +2440,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             if (!offset) return;
 
             if (offset.z !== 0) {
-              for (let ln = op.startLine; ln <= op.endLine; ln++) zShiftLines[ln] = offset.z;
+              // Only real feed moves (G01/G02/G03) get compensated - a
+              // G00 rapid retract/reposition (e.g. a clearance height
+              // between passes) isn't cutting anything, so it has no
+              // business being shifted by a wear-compensation value.
+              // Modal state (m.motion) correctly carries forward even
+              // for bare "Z19.0"-style lines that don't restate the
+              // G-word, so a line continuing in rapid mode stays
+              // excluded and a line continuing in feed mode stays
+              // included, matching real G-code semantics.
+              moves.forEach(function(m) {
+                if (m.lineIndex >= op.startLine && m.lineIndex <= op.endLine && m.motion !== 0 && m.motion !== null) {
+                  zShiftLines[m.lineIndex] = offset.z;
+                }
+              });
             }
 
             const xyValue = offset.xy;
