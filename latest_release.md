@@ -1,3 +1,9 @@
+## v1.16.1 (EXPERIMENTAL — stable max-safe value + one-click Fix)
+
+**Fixed a real bug: the reported max-safe offset could change depending on which value you tried.** Outside Profile's tiny corner fillet has 6 depth passes, and this post processor's coordinate rounding gives each pass's "identical" fillet a slightly different computed radius. The reported limit was only ever computed from whichever passes currently failed at the specific value being tested - trying a large offset failed one subset and reported one number, trying a smaller offset failed a different subset and reported a tighter number. Now the tightest limit across *all* geometry in that operation is computed once, up front, so the reported number is a fixed property of the geometry and can't shift between attempts. Verified: 0.99 and 0.62 (previously reported as the limit) both now correctly report the same stable 0.59.
+
+**Added a one-click "Fix" button to each size-related error row.** Clicking it reads the operation's current entered value, clamps its magnitude to the max-safe limit while preserving its sign (e.g. -0.99 → -0.59, +0.99 → +0.59), writes it directly into the X & Y Offset input, and marks itself "Fixed." Only size-related rows get a Fix button - other problem types (missing tag, collision, unsupported geometry) don't have a numeric value to clamp to, so no button appears for those.
+
 ## v1.16.0 (EXPERIMENTAL — grouped, table-based error display)
 
 **Errors from applying an offset are now grouped and shown as a compact table** instead of a wall of repeated text.

@@ -650,6 +650,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin-top: 3px; margin-left: 14px;
       }
       .twc-warning-footer { margin-top: 14px; font-size: 0.85rem; color: var(--color-text-secondary, #999); }
+      .twc-warning-fix { width: 90px; text-align: right; white-space: nowrap; }
+      .twc-fix-btn { padding: 6px 16px; font-size: 0.78rem; }
     </style>
 
     <div class="sw-container">
@@ -842,7 +844,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const headRow = document.createElement('tr');
             const th1 = document.createElement('th'); th1.textContent = 'Error';
             const th2 = document.createElement('th'); th2.textContent = 'Details';
-            headRow.appendChild(th1); headRow.appendChild(th2);
+            const th3 = document.createElement('th'); th3.textContent = '';
+            headRow.appendChild(th1); headRow.appendChild(th2); headRow.appendChild(th3);
             thead.appendChild(headRow);
             table.appendChild(thead);
 
@@ -863,6 +866,30 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               tdDetails.appendChild(detailDiv);
               tr.appendChild(tdNum);
               tr.appendChild(tdDetails);
+
+              const tdFix = document.createElement('td');
+              tdFix.className = 'twc-warning-fix';
+              if (w.kind === 'size' && w.opIdx !== undefined && w.opIdx !== null) {
+                const fixBtn = document.createElement('button');
+                fixBtn.type = 'button';
+                fixBtn.className = 'btn btn-glow-green twc-fix-btn';
+                fixBtn.textContent = 'Fix';
+                fixBtn.addEventListener('click', function() {
+                  const input = document.querySelector('#wcTableBody .wear-input[data-op-idx="' + w.opIdx + '"][data-axis="xy"]');
+                  if (!input) return;
+                  const current = parseFloat(input.value);
+                  const sign = (!isNaN(current) && current < 0) ? -1 : 1;
+                  input.value = (sign * w.maxSafe).toFixed(2);
+                  updateWearInputColor(input);
+                  updateApplySafetyBtnState();
+                  updateOpSectionStats();
+                  fixBtn.disabled = true;
+                  fixBtn.textContent = 'Fixed';
+                });
+                tdFix.appendChild(fixBtn);
+              }
+              tr.appendChild(tdFix);
+
               tbody.appendChild(tr);
             });
             table.appendChild(tbody);
@@ -2224,7 +2251,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
             if (!op.twcDirection) {
               rawWarnings.push({
-                opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                 heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): No internal/external tag.',
                 detail: 'Add "internal" or "external" to this operation\\'s Notes to apply an offset.'
               });
@@ -2234,7 +2261,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const elements = buildPathElements(moves, op.startLine, op.endLine);
             if (elements.length === 0) {
               rawWarnings.push({
-                opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                 heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): No geometry found.',
                 detail: 'This operation has no cuttable X/Y moves to offset.'
               });
@@ -2250,10 +2277,29 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const consumedLines = {};
             circleFeatures.forEach(function(c) { c.lineIndices.forEach(function(li) { consumedLines[li] = true; }); });
 
+            // Stable, whole-operation tightest limit - computed once from
+            // EVERY arc in this operation (both circles and any real
+            // arcs in the remainder profile), not just whichever
+            // features happen to fail at the specific value being
+            // tried. The same post processor's coordinate rounding can
+            // give nominally-identical corners across different depth
+            // passes slightly different radii, so only checking
+            // currently-failing features made the reported limit shift
+            // depending on what offset was attempted - this fixes that
+            // by reporting the true tightest constraint up front, always.
+            let opTightestRadius = null;
+            circleFeatures.forEach(function(c) {
+              if (opTightestRadius === null || c.radius < opTightestRadius) opTightestRadius = c.radius;
+            });
+            elements.forEach(function(el) {
+              if (el.type === 'arc' && (opTightestRadius === null || el.radius < opTightestRadius)) opTightestRadius = el.radius;
+            });
+            const opMaxSafe = (opTightestRadius !== null) ? twcMaxSafeOffset(opTightestRadius) : 0;
+
             circleFeatures.forEach(function(cls) {
               const newRadius = computeNewRadius(op.twcDirection, cls.radius, xyValue);
               if (newRadius <= 0.01) {
-                rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, kind: 'size', maxSafe: twcMaxSafeOffset(cls.radius) });
+                rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'size', maxSafe: opMaxSafe });
                 return;
               }
 
@@ -2272,7 +2318,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               });
               if (circleCollidesWithOthers(cls.center, newRadius, clsZMin, clsZMax, allSamples, excludeSet)) {
                 rawWarnings.push({
-                  opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                  opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                   heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Toolpath collision.',
                   detail: 'This offset would cross another operation\\'s toolpath at the same depth.'
                 });
@@ -2306,7 +2352,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 const ny = cls.center.y + (m.y - cls.center.y) * factor;
                 if ((Math.abs(nx - m.x) > TWC_EPS && !m.hasX) || (Math.abs(ny - m.y) > TWC_EPS && !m.hasY)) {
                   rawWarnings.push({
-                    opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                    opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                     heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Unsupported line pattern.',
                     detail: 'Line ' + (m.lineIndex + 1) + ' needs an axis change but doesn\\'t explicitly state it.'
                   });
@@ -2338,10 +2384,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               const result = offsetChainGeneral(chain, growAmount);
               if (!result.ok) {
                 if (result.kind === 'size') {
-                  rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, kind: 'size', maxSafe: result.maxSafe });
+                  rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'size', maxSafe: opMaxSafe });
                 } else {
                   rawWarnings.push({
-                    opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                    opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                     heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Unsupported geometry.',
                     detail: (result.reason.charAt(0).toUpperCase() + result.reason.slice(1)) + '.'
                   });
@@ -2370,7 +2416,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               });
               if (pathSamplesCollideWithOthers(chainSamples, chainZMin, chainZMax, allSamples, excludeSet)) {
                 rawWarnings.push({
-                  opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                  opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'other',
                   heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Toolpath collision.',
                   detail: 'This section of the profile would cross another operation\\'s toolpath at the same depth.'
                 });
@@ -2398,18 +2444,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           // Group only the "size" warnings, one per operation using the
           // tightest (smallest) safe limit found - a single operation
           // can hit this from several different features, and the user
-          // just needs the one binding number. "Other" warnings (missing
-          // direction tag, collision, unsupported geometry, ...) always
-          // show individually, every time - they're not about a
-          // relaxable size limit, so grouping/collapsing them would hide
-          // real, distinct problems.
+          // just needs the one binding number (now computed as a stable,
+          // whole-operation value up front, so it can't shift depending
+          // on which specific offset was tried). "Other" warnings
+          // (missing direction tag, collision, unsupported geometry,
+          // ...) always show individually, every time - they're not
+          // about a relaxable size limit, so grouping/collapsing them
+          // would hide real, distinct problems.
           const sizeByOp = {};
           const opOrder = [];
           rawWarnings.forEach(function(w) {
             if (opOrder.indexOf(w.opNumber) === -1) opOrder.push(w.opNumber);
             if (w.kind === 'size') {
               if (!sizeByOp[w.opNumber] || w.maxSafe < sizeByOp[w.opNumber].maxSafe) {
-                sizeByOp[w.opNumber] = { opName: w.opName, maxSafe: w.maxSafe };
+                sizeByOp[w.opNumber] = { opName: w.opName, opIdx: w.opIdx, maxSafe: w.maxSafe };
               }
             }
           });
@@ -2421,12 +2469,13 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               const bound = s.maxSafe.toFixed(2);
               warnings.push({
                 heading: 'Operation #' + opNumber + ' (' + s.opName + '): Radial offset too large.',
-                detail: 'Set offset within (-' + bound + ' and +' + bound + ') to apply an offset.'
+                detail: 'Set offset within (-' + bound + ' and +' + bound + ') to apply an offset.',
+                kind: 'size', opIdx: s.opIdx, maxSafe: s.maxSafe
               });
             }
             rawWarnings
               .filter(function(w) { return w.opNumber === opNumber && w.kind === 'other'; })
-              .forEach(function(w) { warnings.push({ heading: w.heading, detail: w.detail }); });
+              .forEach(function(w) { warnings.push({ heading: w.heading, detail: w.detail, kind: 'other', opIdx: w.opIdx }); });
           });
 
           const lines = fileContent.split(/\\r?\\n/);
