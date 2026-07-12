@@ -82,6 +82,8 @@ function onGcodeProgramLoad(content, context, settings) {
   // on unhandled JS exceptions. Always return original content on failure
   // (host sees a graceful fallback, user can still load the file as-is).
   try {
+    twcProbePluginApi(context);
+
     if (content && content.length > 0) {
       const markerTs = twcExtractMarkerTimestamp(content.substring(0, 160));
       if (markerTs !== null && (Date.now() - markerTs) < SW2026_REOPEN_SUPPRESS_MS) {
@@ -131,6 +133,61 @@ function safeLog(msg) {
       pluginContext.log('[SW2026] ' + msg);
     }
   } catch (e) { /* swallow */ }
+}
+
+// Read-only diagnostic - collects every enumerable and own property name
+// (including inherited/prototype ones) on a given object, so we can see
+// the REAL API surface the host actually exposes, rather than guessing
+// from documentation. Wrapped defensively since reflection methods
+// (Object.keys, getOwnPropertyNames, getPrototypeOf) may not all be
+// available in this Jint sandbox - any failure just yields fewer names,
+// never a crash.
+function twcProbeKeys(obj) {
+  const keys = {};
+  if (obj === null || obj === undefined) return [];
+  try {
+    for (const k in obj) keys[k] = true;
+  } catch (e) { /* ignore */ }
+  try {
+    Object.keys(obj).forEach(function(k) { keys[k] = true; });
+  } catch (e) { /* ignore */ }
+  try {
+    Object.getOwnPropertyNames(obj).forEach(function(k) { keys[k] = true; });
+  } catch (e) { /* ignore */ }
+  try {
+    const proto = Object.getPrototypeOf(obj);
+    if (proto) {
+      Object.getOwnPropertyNames(proto).forEach(function(k) { keys[k] = true; });
+    }
+  } catch (e) { /* ignore */ }
+  // Strip standard Object.prototype noise that's always present
+  // regardless of what the host actually adds, so the log only shows
+  // properties genuinely worth looking at.
+  ['constructor', '__defineGetter__', '__defineSetter__', 'hasOwnProperty',
+   '__lookupGetter__', '__lookupSetter__', 'isPrototypeOf', 'propertyIsEnumerable',
+   'toString', 'valueOf', 'toLocaleString', '__proto__'].forEach(function(k) { delete keys[k]; });
+  return Object.keys(keys);
+}
+
+// One-time diagnostic run on every load - logs the actual API surface
+// exposed on pluginContext and on the context object passed into
+// onGcodeProgramLoad, to see if this host offers anything beyond what
+// we've already confirmed (log/getTools/showDialog, and the confirmed-
+// nonfunctional registerToolMenu) - e.g. any other event registration or
+// panel/menu API that could let this dialog be reopened on demand
+// instead of only via a G-code file (re)load. Entirely read-only/safe -
+// cannot affect the machine, the file, or the tool library.
+function twcProbePluginApi(context) {
+  try {
+    safeLog('[PROBE] pluginContext keys: ' + JSON.stringify(twcProbeKeys(typeof pluginContext !== 'undefined' ? pluginContext : null)));
+  } catch (e) {
+    safeLog('[PROBE] pluginContext probe failed: ' + (e && e.message ? e.message : e));
+  }
+  try {
+    safeLog('[PROBE] context keys: ' + JSON.stringify(twcProbeKeys(context)));
+  } catch (e) {
+    safeLog('[PROBE] context probe failed: ' + (e && e.message ? e.message : e));
+  }
 }
 
 // === Tool library ===
@@ -714,6 +771,65 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         margin-top: 3px; margin-left: 14px;
       }
       .twc-warning-footer { margin-top: 14px; font-size: 0.85rem; color: var(--color-text-secondary, #999); }
+
+      .twc-info-icon {
+        position: relative;
+        display: inline-flex;
+        cursor: help;
+        opacity: 0.8;
+        font-weight: 400;
+        vertical-align: middle;
+      }
+      .twc-info-icon:hover { opacity: 1; }
+      .twc-info-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 230px;
+        background: var(--color-surface-muted, #1a1a1a);
+        color: var(--color-text-primary, #e0e0e0);
+        border: 1px solid var(--color-border, #3a3f45);
+        border-radius: 8px;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+        padding: 10px 12px;
+        font-size: 0.75rem;
+        font-weight: 400;
+        line-height: 1.4;
+        text-align: left;
+        white-space: normal;
+        text-transform: none;
+        letter-spacing: normal;
+        pointer-events: none;
+        transition: opacity 0.12s ease;
+        z-index: 100000;
+      }
+      .twc-info-tooltip::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-bottom-color: var(--color-border, #3a3f45);
+      }
+      .twc-info-tooltip::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% - 1px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-bottom-color: var(--color-surface-muted, #1a1a1a);
+        z-index: 1;
+      }
+      .twc-info-icon:hover .twc-info-tooltip,
+      .twc-info-icon:focus .twc-info-tooltip {
+        visibility: visible;
+        opacity: 1;
+      }
       .twc-warning-fix { width: 90px; text-align: right; white-space: nowrap; }
       .twc-fix-btn { padding: 6px 16px; font-size: 0.78rem; }
     </style>
@@ -786,7 +902,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool #</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Tool Description</th>
                 <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">Z Offset</th>
-                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X &amp; Y Offset <span style="cursor:help; opacity:0.75; font-weight:400;" title="This is a RADIUS value, not diameter - the hole/boss's overall size across changes by 2x this amount. Example: entering 0.10 changes the diameter by 0.20mm, not 0.10mm.">&#9432;</span></th>
+                <th style="text-align:center; padding:8px 10px; background:var(--color-surface-muted-2, #1f2327); color:#fff; border-bottom:2px solid var(--color-border, #3a3f45);">X &amp; Y Offset <span class="twc-info-icon" tabindex="0">&#9432;<span class="twc-info-tooltip">This is a RADIUS value, not diameter - the hole/boss's overall size across changes by 2x this amount. Example: entering 0.10 changes the diameter by 0.20mm, not 0.10mm.</span></span></th>
               </tr>
             </thead>
             <tbody id="wcTableBody"></tbody>
