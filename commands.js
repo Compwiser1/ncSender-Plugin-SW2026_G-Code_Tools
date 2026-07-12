@@ -47,20 +47,24 @@ function buildInitialConfig(raw) {
 // transforms again, which would re-fire this plugin in a loop. The
 // marker breaks that specific loop.
 //
-// The marker now includes a timestamp rather than being a permanent
-// block: only an occurrence within SW2026_REOPEN_SUPPRESS_MS of "now" is
-// treated as the immediate load-temp echo and suppressed. An older
-// marker (from a genuine later reload) falls through and shows the
-// dialog again, with Operation Manager's last-used values restored from
-// the SW2026_TWC_VALUES comment also written alongside the marker - this
-// is the "reopen the plugin to adjust values" path. Whether a later
-// reload actually reads this marked content depends on how ncSender
-// caches "the current file" versus rereading fresh from disk - a past
-// attempt at reopen-via-marker caused two dialogs firing from two
-// different content sources at once, so this needs real-app
-// verification, not just this file-level logic, before being trusted.
+// The marker includes a timestamp rather than being a permanent block:
+// only an occurrence within SW2026_REOPEN_SUPPRESS_MS of "now" is treated
+// as the immediate load-temp echo and suppressed - an older marker (or
+// none at all, confirmed to be the normal case since load-temp only ever
+// produces an in-memory/cached version and never writes the marker back
+// to the actual file on disk) falls through and shows the dialog again
+// normally on a later reload.
+//
+// Operation Manager's values are NOT persisted via this file-embedded
+// marker - an earlier attempt at that was tested live and confirmed not
+// to work, for the same reason: reloading a file reads the pristine,
+// never-marked version from disk, so anything written only into the
+// translated/uploaded content never round-trips back. See the
+// browser-side localStorage-based persistence instead (keyed by the
+// file's path), which lives in ncSender's own UI process rather than the
+// file content, so it doesn't depend on what does or doesn't get written
+// to disk.
 const SW2026_MARKER_PREFIX = '; ncSender-sw2026-transformed:';
-const SW2026_VALUES_PREFIX = '; SW2026_TWC_VALUES:';
 const SW2026_REOPEN_SUPPRESS_MS = 5000;
 
 function twcExtractMarkerTimestamp(content) {
@@ -69,18 +73,6 @@ function twcExtractMarkerTimestamp(content) {
   const rest = content.substring(idx + SW2026_MARKER_PREFIX.length, idx + SW2026_MARKER_PREFIX.length + 20);
   const m = rest.match(/^(\d+)/);
   return m ? parseInt(m[1], 10) : null;
-}
-
-function twcParseStoredValues(content) {
-  const idx = content.indexOf(SW2026_VALUES_PREFIX);
-  if (idx === -1) return {};
-  const lineEnd = content.indexOf('\n', idx);
-  const jsonText = content.substring(idx + SW2026_VALUES_PREFIX.length, lineEnd === -1 ? undefined : lineEnd).trim();
-  try {
-    return JSON.parse(jsonText);
-  } catch (e) {
-    return {};
-  }
 }
 
 // === Entry point ===
@@ -118,8 +110,7 @@ function onGcodeProgramLoad(content, context, settings) {
     safeLog('Tool check: ' + rows.length + ' tool(s) - status: ' + overall.status +
       (overall.allReady ? ' (all ready to map)' : ''));
 
-    const storedTwcValues = twcParseStoredValues(content);
-    showUnifiedDialog(content, context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary, storedTwcValues);
+    showUnifiedDialog(content, context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary);
 
     // Always return the original content. If the user completes mapping,
     // the dialog's own script uploads the translated file via
@@ -447,7 +438,7 @@ function parseOperations(content) {
 // a first draft for live testing in the real app - expect follow-up
 // tweaks once real screenshots come back.
 
-function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary, storedTwcValues) {
+function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary) {
   const wearCompOperations = parseOperations(content);
 
   const dialogToolLibrary = {};
@@ -839,12 +830,42 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         const sourcePath = ${JSON.stringify(sourcePath || '')};
         const filename = ${JSON.stringify(filename || 'translated.gcode')};
         const wearCompOperations = ${JSON.stringify(wearCompOperations)};
-        const storedTwcValues = ${JSON.stringify(storedTwcValues || {})};
         let magazineSize = 0;
         let currentSlotRow = null;
         let toolSectionState = 'pending';
         let opSectionState = 'pending';
         let storedWearOffsets = {};
+
+        // Persists Operation Manager's Z/X&Y values in the browser
+        // (ncSender's own UI process), keyed by this file's path - NOT
+        // written into the G-code itself, since that was tried and
+        // confirmed not to work: load-temp only ever produces an
+        // in-memory/cached version of the translated file and never
+        // writes the marker or any embedded values back to the actual
+        // file on disk, so reloading the file always reads the pristine
+        // original with nothing to restore from. This lives here
+        // instead, so it doesn't depend on what does or doesn't get
+        // written to disk.
+        const TWC_STORAGE_KEY = 'sw2026-twc-values:' + (sourcePath || filename);
+
+        function twcLoadStoredValues() {
+          try {
+            const raw = window.localStorage ? window.localStorage.getItem(TWC_STORAGE_KEY) : null;
+            return raw ? JSON.parse(raw) : {};
+          } catch (e) {
+            return {};
+          }
+        }
+
+        function twcSaveStoredValues(values) {
+          try {
+            if (window.localStorage) window.localStorage.setItem(TWC_STORAGE_KEY, JSON.stringify(values));
+          } catch (e) {
+            // ignore storage failures (unavailable, quota, private mode, etc.)
+          }
+        }
+
+        const storedTwcValues = twcLoadStoredValues();
 
         const overlay = document.getElementById('slotSelectorOverlay');
         const popup = document.getElementById('slotSelectorPopup');
@@ -1672,6 +1693,18 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           btn.classList.toggle('btn-glow-green', hasNonZero);
         }
 
+        function twcCollectAndSaveCurrentValues() {
+          const values = {};
+          document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+            const idx = input.getAttribute('data-op-idx');
+            const axis = input.getAttribute('data-axis');
+            const val = parseFloat(input.value);
+            if (!values[idx]) values[idx] = { xy: 0, z: 0 };
+            if (!isNaN(val)) values[idx][axis] = val;
+          });
+          twcSaveStoredValues(values);
+        }
+
         document.getElementById('wcTableBody').addEventListener('click', function(e) {
           const arrow = e.target.closest('.wear-arrow');
           if (!arrow) return;
@@ -1685,6 +1718,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           updateWearInputColor(input);
           updateApplySafetyBtnState();
           updateOpSectionStats();
+          twcCollectAndSaveCurrentValues();
         });
 
         document.getElementById('wcTableBody').addEventListener('input', function(e) {
@@ -1697,6 +1731,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           updateWearInputColor(input);
           updateApplySafetyBtnState();
           updateOpSectionStats();
+          twcCollectAndSaveCurrentValues();
         });
 
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
@@ -1727,6 +1762,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               await twcShowWarningTable('Some Offsets Could Not Be Applied', result.warnings, 'Everything else will still be applied.', false);
             }
             storedWearOffsets = offsets;
+            twcSaveStoredValues(offsets);
             setOpSectionState('ready');
           } catch (err) {
             btn.disabled = false;
@@ -2778,16 +2814,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               fileContent = twcResult.content;
             }
 
-            // Strip any marker/values lines left over from a previous
-            // round before prepending fresh ones, so they don't
-            // accumulate on every subsequent offset round.
+            // Strip any marker line left over from a previous round
+            // before prepending a fresh one, so they don't accumulate on
+            // every subsequent offset round.
             const cleanedContent = fileContent.split(/\\r?\\n/).filter(function(l) {
-              return l.indexOf('${SW2026_MARKER_PREFIX}') === -1 && l.indexOf('${SW2026_VALUES_PREFIX}') === -1;
+              return l.indexOf('${SW2026_MARKER_PREFIX}') === -1;
             }).join('\\r\\n');
 
-            const transformed = '${SW2026_MARKER_PREFIX}' + Date.now() + '\\n' +
-              '${SW2026_VALUES_PREFIX}' + JSON.stringify(storedWearOffsets) + '\\n' +
-              cleanedContent;
+            const transformed = '${SW2026_MARKER_PREFIX}' + Date.now() + '\\n' + cleanedContent;
             const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
             const delays = [0, 250, 500, 1000, 2000, 4000];
             function attempt(i) {

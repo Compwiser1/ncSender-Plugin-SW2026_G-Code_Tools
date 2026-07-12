@@ -1,3 +1,11 @@
+## v1.18.1 (EXPERIMENTAL — value persistence actually works now, fixed via real user testing)
+
+**v1.18.0's file-embedded value persistence was tested live and confirmed not to work** - reloading the file showed the dialog again (that part was fine), but Z/X&Y Offset fields came back blank instead of restoring last-used values. Root cause: `load-temp` only ever produces an in-memory/cached version of the translated file for machining - it never writes the marker or any embedded values back to the actual file on disk, so reloading the file always reads the pristine original with nothing to restore from.
+
+**Fixed by moving value persistence out of the G-code file entirely and into the browser's own storage**, keyed by the file's path - this lives in ncSender's UI process itself, so it works regardless of what does or doesn't get written to disk. Values save automatically as you type or use the stepper arrows (not just when clicking Apply Offset), so whatever you last had entered is what you'll see next time this same file's dialog opens - verified by simulating two fully separate dialog sessions sharing the same underlying browser storage and confirming session 2 correctly loads exactly what session 1 saved and rendered those values into the actual input fields.
+
+The marker itself (the timestamp-based one from v1.18.0, used only to suppress the plugin's own immediate internal re-trigger after Bring To Life) is unchanged and still in place - only the file-embedded *values* piece was removed, since that's the part confirmed broken.
+
 ## v1.18.0 (EXPERIMENTAL — reopen the dialog to adjust values, values persist across sessions)
 
 **A quick way to reopen the plugin and adjust Operation Manager values, with those values remembered.**
