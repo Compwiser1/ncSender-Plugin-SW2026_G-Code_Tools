@@ -1653,16 +1653,16 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const tbody = document.getElementById('wcTableBody');
           tbody.innerHTML = wearCompOperations.map(function(op, idx) {
             const stored = storedTwcValues[idx] || storedTwcValues[String(idx)];
-            const storedZ = stored && typeof stored.z === 'number' ? stored.z.toFixed(2) : '';
-            const storedXy = stored && typeof stored.xy === 'number' ? stored.xy.toFixed(2) : '';
+            const storedZ = stored && typeof stored.z === 'number' && stored.z !== 0 ? twcSignedFixed(stored.z) : (stored && typeof stored.z === 'number' ? stored.z.toFixed(2) : '');
+            const storedXy = stored && typeof stored.xy === 'number' && stored.xy !== 0 ? twcSignedFixed(stored.xy) : (stored && typeof stored.xy === 'number' ? stored.xy.toFixed(2) : '');
             const zCell = '<div class="wear-stepper">' +
-              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedZ + '" data-op-idx="' + idx + '" data-axis="z">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^[+-]?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedZ + '" data-op-idx="' + idx + '" data-axis="z">' +
               '<div class="wear-arrows">' +
               '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
               '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
               '</div></div>';
             const xyCell = '<div class="wear-stepper">' +
-              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedXy + '" data-op-idx="' + idx + '" data-axis="xy">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^[+-]?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedXy + '" data-op-idx="' + idx + '" data-axis="xy">' +
               '<div class="wear-arrows">' +
               '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
               '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
@@ -1693,6 +1693,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           btn.classList.toggle('btn-glow-green', hasNonZero);
         }
 
+        function twcSignedFixed(val) {
+          const fixed = val.toFixed(2);
+          return val >= 0 ? '+' + fixed : fixed;
+        }
+
         function twcCollectAndSaveCurrentValues() {
           const values = {};
           document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
@@ -1714,7 +1719,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const base = isNaN(current) ? 0 : current;
           let next = Math.round((base * 100) + (dir * 1)) / 100;
           next = Math.max(-1, Math.min(1, next));
-          input.value = next.toFixed(2);
+          input.value = twcSignedFixed(next);
           updateWearInputColor(input);
           updateApplySafetyBtnState();
           updateOpSectionStats();
@@ -1733,6 +1738,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           updateOpSectionStats();
           twcCollectAndSaveCurrentValues();
         });
+
+        // Finalizes the +/- sign format once the user is done typing
+        // (on blur, not on every keystroke) - reformatting mid-typing
+        // would fight with the person still entering digits.
+        document.getElementById('wcTableBody').addEventListener('blur', function(e) {
+          const input = e.target.closest('.wear-input');
+          if (!input) return;
+          const val = parseFloat(input.value);
+          if (!isNaN(val)) {
+            input.value = twcSignedFixed(val);
+            updateWearInputColor(input);
+            twcCollectAndSaveCurrentValues();
+          }
+        }, true);
 
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
           if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -2402,6 +2421,20 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const moves = parseFileMoves(fileContent);
           const allSamples = buildGeometrySamples(moves);
 
+          // Lines where "R" means arc radius (this post processor's
+          // R-format arcs), not a canned-cycle retract plane - the
+          // Z-offset shift below must never touch these, or it corrupts
+          // the arc's radius by the unrelated Z value. Confirmed as a
+          // real bug: applying both a Z Offset and an X & Y Offset to
+          // the same operation was shifting arc radii by the Z amount
+          // too, since the original Z-shift regex (written before this
+          // post processor existed, when "R" only ever meant a canned-
+          // cycle retract height) matches Z and R together.
+          const rFormatArcLines = {};
+          moves.forEach(function(m) {
+            if (m.isArc && m.isRFormat) rFormatArcLines[m.lineIndex] = true;
+          });
+
           wearCompOperations.forEach(function(op, idx) {
             const offset = opOffsets[idx];
             if (!offset) return;
@@ -2667,7 +2700,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const z = zShiftLines[i];
             let zChanged = false;
             if (z !== undefined && z !== 0 && !isComment) {
-              line = line.replace(/([ZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g, function(match, letter, numStr) {
+              const zRegex = rFormatArcLines[i]
+                ? /(Z)(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g
+                : /([ZR])(-?(?:[0-9]+[.]?[0-9]*|[.][0-9]+))/g;
+              line = line.replace(zRegex, function(match, letter, numStr) {
                 zChanged = true;
                 const num = parseFloat(numStr);
                 const shifted = Math.round((num + z) * 10000) / 10000;
@@ -2850,6 +2886,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // === Init ===
         renderTable();
         renderWearCompTable();
+        document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+          updateWearInputColor(input);
+        });
         updateApplySafetyBtnState();
         updateToolSectionStats();
         updateOpSectionStats();
