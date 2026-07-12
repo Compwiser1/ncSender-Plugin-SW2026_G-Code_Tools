@@ -602,6 +602,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         display: flex; flex-direction: column;
         box-shadow: 0 16px 48px rgba(0,0,0,0.55);
       }
+      .twc-modal.twc-modal--wide { max-width: 960px; }
       .twc-modal-header {
         display: flex; align-items: center; gap: 10px;
         padding: 16px 20px;
@@ -625,6 +626,30 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         flex-shrink: 0;
       }
       .twc-modal-actions .btn { flex: 0 0 auto; padding: 9px 22px; }
+
+      .twc-warning-stats {
+        font-size: 0.85rem; font-weight: 600;
+        color: var(--color-text-secondary, #999);
+        margin-bottom: 12px;
+      }
+      .twc-warning-table { width: 100%; border-collapse: collapse; }
+      .twc-warning-table th {
+        text-align: left; padding: 7px 10px; font-size: 0.72rem;
+        text-transform: uppercase; letter-spacing: 0.04em;
+        background: var(--color-surface-muted-2, #1f2327); color: #fff;
+        border-bottom: 2px solid var(--color-border, #3a3f45);
+      }
+      .twc-warning-table td {
+        padding: 9px 10px; border-bottom: 1px solid var(--color-border, #2a2e33);
+        vertical-align: top;
+      }
+      .twc-warning-num { font-weight: 700; white-space: nowrap; width: 100px; color: var(--color-text-secondary, #999); }
+      .twc-warning-heading { font-weight: 700; }
+      .twc-warning-detail {
+        font-style: italic; font-size: 0.85em; opacity: 0.8;
+        margin-top: 3px; margin-left: 14px;
+      }
+      .twc-warning-footer { margin-top: 14px; font-size: 0.85rem; color: var(--color-text-secondary, #999); }
     </style>
 
     <div class="sw-container">
@@ -718,7 +743,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
     </div>
 
     <div id="twcModalOverlay" class="twc-modal-overlay">
-      <div class="twc-modal">
+      <div class="twc-modal" id="twcModalCard">
         <div class="twc-modal-header">
           <span class="twc-modal-icon" id="twcModalIcon">&#9888;&#65039;</span>
           <span class="twc-modal-title" id="twcModalTitle">Notice</span>
@@ -789,6 +814,86 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
         function twcConfirm(message, title) {
           return twcShowModal(title || 'Please Confirm', '\u26A0\uFE0F', message, true);
+        }
+
+        // Renders a compact table of structured warnings - one row per
+        // error, numbered "Error #1", "Error #2", ... - with a bold
+        // heading and a smaller italic, indented detail line beneath it,
+        // instead of a wall of plain text. Widens the modal so most rows
+        // fit on one or two lines.
+        function twcShowWarningTable(title, warningsArr, footerNote, showCancel) {
+          return new Promise(function(resolve) {
+            const modalOverlay = document.getElementById('twcModalOverlay');
+            const modalCard = document.getElementById('twcModalCard');
+            document.getElementById('twcModalTitle').textContent = title;
+            document.getElementById('twcModalIcon').textContent = '\u26A0\uFE0F';
+            const body = document.getElementById('twcModalBody');
+            body.innerHTML = '';
+
+            const count = warningsArr.length;
+            const stats = document.createElement('div');
+            stats.className = 'twc-warning-stats';
+            stats.textContent = count + (count === 1 ? ' Error Found' : ' Errors Found');
+            body.appendChild(stats);
+
+            const table = document.createElement('table');
+            table.className = 'twc-warning-table';
+            const thead = document.createElement('thead');
+            const headRow = document.createElement('tr');
+            const th1 = document.createElement('th'); th1.textContent = 'Error';
+            const th2 = document.createElement('th'); th2.textContent = 'Details';
+            headRow.appendChild(th1); headRow.appendChild(th2);
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            warningsArr.forEach(function(w, i) {
+              const tr = document.createElement('tr');
+              const tdNum = document.createElement('td');
+              tdNum.className = 'twc-warning-num';
+              tdNum.textContent = 'Error #' + (i + 1);
+              const tdDetails = document.createElement('td');
+              const headingDiv = document.createElement('div');
+              headingDiv.className = 'twc-warning-heading';
+              headingDiv.textContent = w.heading;
+              const detailDiv = document.createElement('div');
+              detailDiv.className = 'twc-warning-detail';
+              detailDiv.textContent = w.detail;
+              tdDetails.appendChild(headingDiv);
+              tdDetails.appendChild(detailDiv);
+              tr.appendChild(tdNum);
+              tr.appendChild(tdDetails);
+              tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            body.appendChild(table);
+
+            if (footerNote) {
+              const footer = document.createElement('div');
+              footer.className = 'twc-warning-footer';
+              footer.textContent = footerNote;
+              body.appendChild(footer);
+            }
+
+            modalCard.classList.add('twc-modal--wide');
+
+            const okBtn = document.getElementById('twcModalOkBtn');
+            const cancelBtn = document.getElementById('twcModalCancelBtn');
+            cancelBtn.style.display = showCancel ? '' : 'none';
+
+            function cleanup(result) {
+              modalOverlay.classList.remove('show');
+              modalCard.classList.remove('twc-modal--wide');
+              okBtn.removeEventListener('click', onOk);
+              cancelBtn.removeEventListener('click', onCancel);
+              resolve(result);
+            }
+            function onOk() { cleanup(true); }
+            function onCancel() { cleanup(false); }
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+            modalOverlay.classList.add('show');
+          });
         }
 
         function escapeHtml(s) {
@@ -1515,7 +1620,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             btn.disabled = false;
             btn.textContent = 'Apply Offset';
             if (result.warnings.length > 0) {
-              await twcAlert('Some of the entered offsets could not be applied and were left untouched:\\n\\n' + result.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied.');
+              await twcShowWarningTable('Some Offsets Could Not Be Applied', result.warnings, 'Everything else will still be applied.', false);
             }
             storedWearOffsets = offsets;
             setOpSectionState('ready');
@@ -1947,7 +2052,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const o = twcOffsetElement(chain[i], growAmount, wind);
             if (!o) {
               const r = chain[i].radius;
-              return { ok: false, reason: 'geometry at line ' + (chain[i].lineIndex + 1) + ' (radius ' + r.toFixed(2) + 'mm) would invert - max safe offset for this geometry is about ' + twcMaxSafeOffset(r).toFixed(2) + 'mm' };
+              return { ok: false, kind: 'size', maxSafe: twcMaxSafeOffset(r) };
             }
             offsetEls.push(o);
           }
@@ -1964,7 +2069,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const gap = twcDist(a.end.x, a.end.y, b.start.x, b.start.y);
             if (gap < 0.02) continue;
             const joined = twcJoinCorner(a, b, origVertex, growAmount);
-            if (!joined) return { ok: false, reason: 'corner near (' + origVertex.x.toFixed(2) + ', ' + origVertex.y.toFixed(2) + ') could not be closed cleanly' };
+            if (!joined) return { ok: false, kind: 'other', reason: 'a corner in this profile could not be closed cleanly' };
             if (joined.fillet) {
               insertions.push({ afterLineIndex: chain[aIdx].lineIndex, element: joined.fillet });
             } else {
@@ -2095,7 +2200,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // succeeds is still applied. Nothing is ever silently wrong -
         // every skip is reported by name with a reason.
         function applyRadialAndZOffsets(fileContent, opOffsets) {
-          const warnings = [];
+          const rawWarnings = [];
           const lineNotes = {};
           const rewrites = {};
           const insertions = [];
@@ -2118,13 +2223,21 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const noteText = 'TWC: ' + twcSignedFixed(xyValue);
 
             if (!op.twcDirection) {
-              warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): has an X & Y Offset entered but its Notes don\\'t say "internal" or "external" - nothing was changed for this operation.');
+              rawWarnings.push({
+                opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): No internal/external tag.',
+                detail: 'Add "internal" or "external" to this operation\\'s Notes to apply an offset.'
+              });
               return;
             }
 
             const elements = buildPathElements(moves, op.startLine, op.endLine);
             if (elements.length === 0) {
-              warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): no cuttable geometry found - nothing was changed.');
+              rawWarnings.push({
+                opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): No geometry found.',
+                detail: 'This operation has no cuttable X/Y moves to offset.'
+              });
               return;
             }
 
@@ -2140,7 +2253,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             circleFeatures.forEach(function(cls) {
               const newRadius = computeNewRadius(op.twcDirection, cls.radius, xyValue);
               if (newRadius <= 0.01) {
-                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the ' + cls.radius.toFixed(2) + 'mm-radius feature at (' + cls.center.x.toFixed(2) + ', ' + cls.center.y.toFixed(2) + ') by ' + xyValue.toFixed(2) + 'mm would eliminate or invert it - max safe offset for this geometry is about ' + twcMaxSafeOffset(cls.radius).toFixed(2) + 'mm - that feature was left untouched.');
+                rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, kind: 'size', maxSafe: twcMaxSafeOffset(cls.radius) });
                 return;
               }
 
@@ -2158,7 +2271,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 if (m.startZ > clsZMax) clsZMax = m.startZ;
               });
               if (circleCollidesWithOthers(cls.center, newRadius, clsZMin, clsZMax, allSamples, excludeSet)) {
-                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting the feature at (' + cls.center.x.toFixed(2) + ', ' + cls.center.y.toFixed(2) + ') to a ' + newRadius.toFixed(2) + 'mm radius would cross another operation\\'s toolpath - that feature was left untouched.');
+                rawWarnings.push({
+                  opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                  heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Toolpath collision.',
+                  detail: 'This offset would cross another operation\\'s toolpath at the same depth.'
+                });
                 return;
               }
 
@@ -2188,7 +2305,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 const nx = cls.center.x + (m.x - cls.center.x) * factor;
                 const ny = cls.center.y + (m.y - cls.center.y) * factor;
                 if ((Math.abs(nx - m.x) > TWC_EPS && !m.hasX) || (Math.abs(ny - m.y) > TWC_EPS && !m.hasY)) {
-                  warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): line ' + (m.lineIndex + 1) + ' needs an axis change but doesn\\'t explicitly state it - that line was left untouched.');
+                  rawWarnings.push({
+                    opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                    heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Unsupported line pattern.',
+                    detail: 'Line ' + (m.lineIndex + 1) + ' needs an axis change but doesn\\'t explicitly state it.'
+                  });
                   localFailed = true;
                   return;
                 }
@@ -2216,7 +2337,15 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               const growAmount = computeGrowAmount(op.twcDirection, xyValue);
               const result = offsetChainGeneral(chain, growAmount);
               if (!result.ok) {
-                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): ' + result.reason + ' - that part of the geometry was left untouched.');
+                if (result.kind === 'size') {
+                  rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, kind: 'size', maxSafe: result.maxSafe });
+                } else {
+                  rawWarnings.push({
+                    opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                    heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Unsupported geometry.',
+                    detail: (result.reason.charAt(0).toUpperCase() + result.reason.slice(1)) + '.'
+                  });
+                }
                 return;
               }
 
@@ -2240,7 +2369,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 if (el.z > chainZMax) chainZMax = el.z;
               });
               if (pathSamplesCollideWithOthers(chainSamples, chainZMin, chainZMax, allSamples, excludeSet)) {
-                warnings.push('Operation #' + op.opNumber + ' (' + op.opName + '): offsetting this section of the profile would cross another operation\\'s toolpath - that geometry was left untouched.');
+                rawWarnings.push({
+                  opNumber: op.opNumber, opName: op.opName, kind: 'other',
+                  heading: 'Operation #' + op.opNumber + ' (' + op.opName + '): Toolpath collision.',
+                  detail: 'This section of the profile would cross another operation\\'s toolpath at the same depth.'
+                });
                 return;
               }
 
@@ -2260,6 +2393,40 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element) + ' (' + noteText + ')' });
               });
             });
+          });
+
+          // Group only the "size" warnings, one per operation using the
+          // tightest (smallest) safe limit found - a single operation
+          // can hit this from several different features, and the user
+          // just needs the one binding number. "Other" warnings (missing
+          // direction tag, collision, unsupported geometry, ...) always
+          // show individually, every time - they're not about a
+          // relaxable size limit, so grouping/collapsing them would hide
+          // real, distinct problems.
+          const sizeByOp = {};
+          const opOrder = [];
+          rawWarnings.forEach(function(w) {
+            if (opOrder.indexOf(w.opNumber) === -1) opOrder.push(w.opNumber);
+            if (w.kind === 'size') {
+              if (!sizeByOp[w.opNumber] || w.maxSafe < sizeByOp[w.opNumber].maxSafe) {
+                sizeByOp[w.opNumber] = { opName: w.opName, maxSafe: w.maxSafe };
+              }
+            }
+          });
+
+          const warnings = [];
+          opOrder.forEach(function(opNumber) {
+            if (sizeByOp[opNumber]) {
+              const s = sizeByOp[opNumber];
+              const bound = s.maxSafe.toFixed(2);
+              warnings.push({
+                heading: 'Operation #' + opNumber + ' (' + s.opName + '): Radial offset too large.',
+                detail: 'Set offset within (-' + bound + ' and +' + bound + ') to apply an offset.'
+              });
+            }
+            rawWarnings
+              .filter(function(w) { return w.opNumber === opNumber && w.kind === 'other'; })
+              .forEach(function(w) { warnings.push({ heading: w.heading, detail: w.detail }); });
           });
 
           const lines = fileContent.split(/\\r?\\n/);
@@ -2408,7 +2575,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             if (opSectionState === 'ready') {
               const twcResult = applyRadialAndZOffsets(fileContent, storedWearOffsets);
               if (twcResult.warnings.length > 0) {
-                const proceed = await twcConfirm('Some geometry could not be offset and will be left unchanged:\\n\\n' + twcResult.warnings.join('\\n\\n') + '\\n\\nEverything else will still be applied. Continue?');
+                const proceed = await twcShowWarningTable('Some Geometry Could Not Be Offset', twcResult.warnings, 'Everything else will still be applied. Continue?', true);
                 if (!proceed) {
                   btn.disabled = false;
                   btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';

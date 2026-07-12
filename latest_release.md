@@ -1,3 +1,12 @@
+## v1.16.0 (EXPERIMENTAL — grouped, table-based error display)
+
+**Errors from applying an offset are now grouped and shown as a compact table** instead of a wall of repeated text.
+
+- **Size-related failures (a feature too small to take the requested offset) are grouped to one line per operation**, using the tightest (smallest) safe limit found across everything that failed in that operation - a stepped counterbore hitting this on 6 depth passes now shows one line, not six. Message simplified to: *"Operation #4 (Outside Profile): Radial offset too large."* with an italic detail line below: *"Set offset within (-0.62 and +0.62) to apply an offset."*
+- **Every other kind of problem (missing internal/external tag, toolpath collision, unsupported geometry) always shows individually, every time** - these aren't a relaxable size limit, so they're never grouped or collapsed, even if that means more rows.
+- **New table layout**: each row is labeled "Error #1," "Error #2," etc., with the operation number/name in bold and the explanation in smaller italic text indented below it - built to fit in one or two lines per row instead of wrapping across many. A header line states the total count ("5 Errors Found"). The dialog widens specifically for this table (960px) so it has room to stay compact.
+- Verified against the real reported scenario (6 depth-pass warnings on Outside Profile collapsing to exactly 1), a mixed multi-operation case (one missing-tag operation + one size-limited operation, both shown correctly), and a full DOM simulation of the table rendering itself (stats line, row structure, heading/detail text, Error # labeling).
+
 ## v1.15.6 (EXPERIMENTAL — better error messages + custom in-app dialog)
 
 - **Self-intersection warnings now state the max safe offset for that specific geometry** - e.g. "geometry at line 941 (radius 0.64mm) would invert - max safe offset for this geometry is about 0.62mm" instead of just "would invert." Applies to both circular features and general profile geometry.
