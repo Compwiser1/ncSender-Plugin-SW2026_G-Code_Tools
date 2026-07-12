@@ -1,3 +1,16 @@
+## v1.19.5 (EXPERIMENTAL — tooltip positioning, opacity, and border fixes)
+
+Three fixes to the "X & Y Offset" info tooltip introduced in v1.19.3, found from a real screenshot:
+- **No longer gets cut off by the right edge of the window** - it was centered under the icon, extending equally left and right; since the icon sits in the last column (near the right edge of the dialog), the right half was pushed past the visible window. Now anchored to grow leftward from the icon's right edge instead, so it always stays within bounds.
+- **Solid, opaque background** - switched from a theme CSS variable (which may carry transparency depending on the app's actual token values) to an explicit solid dark color, so it can never look washed-out or see-through regardless of what's behind it.
+- **Glowing orange border** added around the tooltip (and its pointer arrow) to make it stand out clearly against the dialog.
+
+## v1.19.4 (EXPERIMENTAL — plugin API surface confirmed final, probe removed)
+
+**Ran the v1.19.3 diagnostic probe in the real app - result is now definitive.** `pluginContext` exposes exactly `log`, `showDialog`, and `getTools` - nothing else. Combined with `registerToolMenu` already confirmed non-functional (v1.11.x), this settles the question: there is no plugin API in this host for registering a menu entry, panel, or any other on-demand trigger. Reloading the G-code file (via the timestamped marker from v1.18.0, with values persisted via browser storage from v1.18.1) is the best this plugin can do to let you reopen the dialog and adjust values - not a workaround settled for, but the actual ceiling of what's possible with this host's current plugin API. A genuinely better experience would require ncSender itself adding a new plugin API for this.
+
+Removed the diagnostic probe code now that it's served its purpose - it was never meant to ship long-term, and dead code doesn't stay around once it's answered its question.
+
 ## v1.19.3 (EXPERIMENTAL — themed tooltip, diagnostic probe for other plugin trigger options)
 
 - **Replaced the native browser tooltip on the "X & Y Offset" info icon with a custom-styled one matching the plugin's own dark theme** - the previous version used the HTML `title` attribute, which renders as a plain, unstylable OS tooltip (confirmed via a real screenshot showing it clash badly with the app's colors). The new tooltip is a small themed card with a pointer arrow, opening *downward* from the icon rather than upward - the header row sits at the very top of a container with `overflow: hidden`, so an upward tooltip risked being clipped by the section's own edge.
