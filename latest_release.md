@@ -1,3 +1,11 @@
+## v1.18.0 (EXPERIMENTAL — reopen the dialog to adjust values, values persist across sessions)
+
+**A quick way to reopen the plugin and adjust Operation Manager values, with those values remembered.**
+
+- **The dialog can now reopen on a later reload of the same file.** Previously, once a file had been processed once, its marker permanently blocked the dialog from ever appearing again on that file. The marker now includes a timestamp: only an occurrence within 5 seconds of "now" is treated as this plugin's own immediate internal re-trigger (from uploading the translated file) and suppressed; an older marker means a genuine later reload, and the dialog opens normally.
+- **Z Offset and X & Y Offset values are now written into the file alongside the marker** (as a dedicated comment, ignored by the controller) and read back and pre-filled into the Operation Manager inputs the next time the dialog opens for that file - "where you left off," not a blank 0.00 every time. Old marker/value comments from a previous round are stripped before writing fresh ones, so they don't accumulate release after release.
+- **Important, honest caveat**: a past attempt at reopening via a marker caused a real bug - two dialogs firing at once, because reloading a file can read the fresh, never-marked file straight from disk while ncSender's own cached "current" version still has the marker, depending on exactly how ncSender's reload path works internally. The time-based approach here is designed to avoid that, but this interaction hasn't been verified against the real app yet - please test reloading carefully (a few seconds after Bring To Life, and again much later) and watch specifically for two dialogs appearing at once before relying on this for real work.
+
 ## v1.17.0 (EXPERIMENTAL — new post processor format support: R-format arcs, semicolon comments)
 
 **Updated the whole plugin to work with the post processor's current output (2026.07.12-C), which changed significantly from earlier versions:**

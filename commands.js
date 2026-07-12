@@ -45,9 +45,43 @@ function buildInitialConfig(raw) {
 // dialog's browser-side translation finishes, it uploads the transformed
 // file via /api/gcode-files/load-temp - that endpoint runs plugin
 // transforms again, which would re-fire this plugin in a loop. The
-// marker breaks the loop: if we see it, the content is already
-// translated and we bail immediately.
-const SW2026_MARKER = '; ncSender-sw2026-transformed';
+// marker breaks that specific loop.
+//
+// The marker now includes a timestamp rather than being a permanent
+// block: only an occurrence within SW2026_REOPEN_SUPPRESS_MS of "now" is
+// treated as the immediate load-temp echo and suppressed. An older
+// marker (from a genuine later reload) falls through and shows the
+// dialog again, with Operation Manager's last-used values restored from
+// the SW2026_TWC_VALUES comment also written alongside the marker - this
+// is the "reopen the plugin to adjust values" path. Whether a later
+// reload actually reads this marked content depends on how ncSender
+// caches "the current file" versus rereading fresh from disk - a past
+// attempt at reopen-via-marker caused two dialogs firing from two
+// different content sources at once, so this needs real-app
+// verification, not just this file-level logic, before being trusted.
+const SW2026_MARKER_PREFIX = '; ncSender-sw2026-transformed:';
+const SW2026_VALUES_PREFIX = '; SW2026_TWC_VALUES:';
+const SW2026_REOPEN_SUPPRESS_MS = 5000;
+
+function twcExtractMarkerTimestamp(content) {
+  const idx = content.indexOf(SW2026_MARKER_PREFIX);
+  if (idx === -1) return null;
+  const rest = content.substring(idx + SW2026_MARKER_PREFIX.length, idx + SW2026_MARKER_PREFIX.length + 20);
+  const m = rest.match(/^(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function twcParseStoredValues(content) {
+  const idx = content.indexOf(SW2026_VALUES_PREFIX);
+  if (idx === -1) return {};
+  const lineEnd = content.indexOf('\n', idx);
+  const jsonText = content.substring(idx + SW2026_VALUES_PREFIX.length, lineEnd === -1 ? undefined : lineEnd).trim();
+  try {
+    return JSON.parse(jsonText);
+  } catch (e) {
+    return {};
+  }
+}
 
 // === Entry point ===
 
@@ -56,20 +90,17 @@ function onGcodeProgramLoad(content, context, settings) {
   // on unhandled JS exceptions. Always return original content on failure
   // (host sees a graceful fallback, user can still load the file as-is).
   try {
-    if (content && content.length > 0 && content.substring(0, 80).indexOf(SW2026_MARKER) !== -1) {
-      // Already processed (tool sync + slot translation already ran) -
-      // this only exists as a loop guard against load-temp re-firing this
-      // same plugin. Tool Wear Compensation is NOT triggered from here:
-      // an earlier attempt tried reopening it by reloading the same file
-      // and detecting this marker, but clicking a file in ncSender's file
-      // browser reads fresh from disk, which never had the marker written
-      // to it (load-temp only ever produced an in-memory/cached version) -
-      // so reloading actually fired onGcodeProgramLoad twice from two
-      // separate sources (the on-disk original, and whatever ncSender
-      // still had cached as "current"), showing both dialogs at once.
-      // Wear Compensation is reachable via a button in the main dialog
-      // instead, available on every load regardless of marker state.
-      return content;
+    if (content && content.length > 0) {
+      const markerTs = twcExtractMarkerTimestamp(content.substring(0, 160));
+      if (markerTs !== null && (Date.now() - markerTs) < SW2026_REOPEN_SUPPRESS_MS) {
+        // The immediate echo from this plugin's own load-temp upload -
+        // suppress it so we don't reopen the dialog milliseconds after
+        // the user just finished with it.
+        return content;
+      }
+      // Otherwise: no marker at all (first load), or an old-enough
+      // marker that this is a deliberate later reload - fall through and
+      // show the dialog again either way.
     }
 
     safeLog('SW2026 G-Code Tools: scanning tool table (' + Math.round(content.length / 1024) + ' KB)...');
@@ -87,7 +118,8 @@ function onGcodeProgramLoad(content, context, settings) {
     safeLog('Tool check: ' + rows.length + ' tool(s) - status: ' + overall.status +
       (overall.allReady ? ' (all ready to map)' : ''));
 
-    showUnifiedDialog(content, context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary);
+    const storedTwcValues = twcParseStoredValues(content);
+    showUnifiedDialog(content, context && context.filename, context && context.sourcePath, rows, overall.status, toolLibrary, storedTwcValues);
 
     // Always return the original content. If the user completes mapping,
     // the dialog's own script uploads the translated file via
@@ -415,7 +447,7 @@ function parseOperations(content) {
 // a first draft for live testing in the real app - expect follow-up
 // tweaks once real screenshots come back.
 
-function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary) {
+function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibrary, storedTwcValues) {
   const wearCompOperations = parseOperations(content);
 
   const dialogToolLibrary = {};
@@ -807,6 +839,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         const sourcePath = ${JSON.stringify(sourcePath || '')};
         const filename = ${JSON.stringify(filename || 'translated.gcode')};
         const wearCompOperations = ${JSON.stringify(wearCompOperations)};
+        const storedTwcValues = ${JSON.stringify(storedTwcValues || {})};
         let magazineSize = 0;
         let currentSlotRow = null;
         let toolSectionState = 'pending';
@@ -1598,14 +1631,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         function renderWearCompTable() {
           const tbody = document.getElementById('wcTableBody');
           tbody.innerHTML = wearCompOperations.map(function(op, idx) {
+            const stored = storedTwcValues[idx] || storedTwcValues[String(idx)];
+            const storedZ = stored && typeof stored.z === 'number' ? stored.z.toFixed(2) : '';
+            const storedXy = stored && typeof stored.xy === 'number' ? stored.xy.toFixed(2) : '';
             const zCell = '<div class="wear-stepper">' +
-              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" data-op-idx="' + idx + '" data-axis="z">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedZ + '" data-op-idx="' + idx + '" data-axis="z">' +
               '<div class="wear-arrows">' +
               '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
               '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="z" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
               '</div></div>';
             const xyCell = '<div class="wear-stepper">' +
-              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" data-op-idx="' + idx + '" data-axis="xy">' +
+              '<input type="text" class="wear-input" inputmode="decimal" pattern="^-?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedXy + '" data-op-idx="' + idx + '" data-axis="xy">' +
               '<div class="wear-arrows">' +
               '<span class="wear-arrow wear-arrow-up" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="1" aria-label="Increase by 0.01">&#9650;</span>' +
               '<span class="wear-arrow wear-arrow-down" role="button" tabindex="0" data-op-idx="' + idx + '" data-axis="xy" data-dir="-1" aria-label="Decrease by 0.01">&#9660;</span>' +
@@ -2742,7 +2778,16 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               fileContent = twcResult.content;
             }
 
-            const transformed = '${SW2026_MARKER}\\n' + fileContent;
+            // Strip any marker/values lines left over from a previous
+            // round before prepending fresh ones, so they don't
+            // accumulate on every subsequent offset round.
+            const cleanedContent = fileContent.split(/\\r?\\n/).filter(function(l) {
+              return l.indexOf('${SW2026_MARKER_PREFIX}') === -1 && l.indexOf('${SW2026_VALUES_PREFIX}') === -1;
+            }).join('\\r\\n');
+
+            const transformed = '${SW2026_MARKER_PREFIX}' + Date.now() + '\\n' +
+              '${SW2026_VALUES_PREFIX}' + JSON.stringify(storedWearOffsets) + '\\n' +
+              cleanedContent;
             const payload = { content: transformed, filename: filename, sourceFile: sourcePath || null };
             const delays = [0, 250, 500, 1000, 2000, 4000];
             function attempt(i) {
