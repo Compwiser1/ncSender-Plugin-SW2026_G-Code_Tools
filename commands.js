@@ -1710,8 +1710,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const tbody = document.getElementById('wcTableBody');
           tbody.innerHTML = wearCompOperations.map(function(op, idx) {
             const stored = storedTwcValues[idx] || storedTwcValues[String(idx)];
-            const storedZ = stored && typeof stored.z === 'number' && stored.z !== 0 ? twcSignedFixed(stored.z) : (stored && typeof stored.z === 'number' ? stored.z.toFixed(2) : '');
-            const storedXy = stored && typeof stored.xy === 'number' && stored.xy !== 0 ? twcSignedFixed(stored.xy) : (stored && typeof stored.xy === 'number' ? stored.xy.toFixed(2) : '');
+            const storedZ = stored && typeof stored.z === 'number' ? twcSignedFixed(stored.z) : '';
+            const storedXy = stored && typeof stored.xy === 'number' ? twcSignedFixed(stored.xy) : '';
             const zCell = '<div class="wear-stepper">' +
               '<input type="text" class="wear-input" inputmode="decimal" pattern="^[+-]?[0-9][.][0-9]{2}$" maxlength="5" placeholder="0.00" title="Format: -1.00 to 1.00" value="' + storedZ + '" data-op-idx="' + idx + '" data-axis="z">' +
               '<div class="wear-arrows">' +
@@ -1751,6 +1751,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         }
 
         function twcSignedFixed(val) {
+          if (val === 0) return '0.00';
           const fixed = val.toFixed(2);
           return val >= 0 ? '+' + fixed : fixed;
         }
@@ -1848,6 +1849,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         });
 
         document.getElementById('livingEdgeBtn').addEventListener('click', function() {
+          // Skipping means "don't apply anything, and don't remember
+          // these values as if they should come back next time" - clear
+          // the inputs, the in-memory offsets, and the persisted browser
+          // storage together, so a later reopen starts genuinely fresh
+          // instead of restoring values that were explicitly skipped.
+          document.querySelectorAll('#wcTableBody .wear-input').forEach(function(input) {
+            input.value = '0.00';
+            updateWearInputColor(input);
+          });
+          storedWearOffsets = {};
+          twcSaveStoredValues({});
           setOpSectionState('skipped');
         });
 
@@ -1910,11 +1922,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // coordinate-rounding noise when matching/clustering circles,
         // but that's too loose for a genuine collision check.
         const TWC_COLLISION_EPS = 0.05;
-
-        function twcSignedFixed(value) {
-          const fixed = value.toFixed(2);
-          return value >= 0 ? '+' + fixed : fixed;
-        }
 
         function twcMaxSafeOffset(radius) {
           return Math.max(0, Math.floor((radius - 0.02) * 100) / 100);

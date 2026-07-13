@@ -1,3 +1,12 @@
+## v1.19.7 (EXPERIMENTAL — Live On The Edge now resets to 0.00, zero values never show a sign)
+
+- **"Live On The Edge" now resets the Z/X&Y input fields to the literal text `0.00`** instead of leaving them blank.
+- **A value of exactly zero never shows a `+` or `-` sign anywhere** - previously the stepper arrows and manual-typing finalization could produce `+0.00`, which doesn't make sense for a genuine zero. Found and fixed a real duplicate-definition bug along the way: two separate copies of the sign-formatting function existed in the same scope, so fixing only one had no effect until the second (unfixed) copy - which silently wins when two functions share a name in the same scope - was removed. Verified directly that a value of 0 now formats as plain `0.00` while nonzero values still correctly show `+` or `-`, and that real G-code notes for actual nonzero offsets are unaffected.
+
+## v1.19.6 (EXPERIMENTAL — Live On The Edge now clears saved offset values)
+
+**"Live On The Edge" now zeroes out previously saved offset values instead of leaving them sitting around.** Skipping Operation Manager is an explicit "don't apply anything" decision, but the Z/X&Y input fields and the persisted browser storage (added in v1.18.1) previously kept whatever was last entered - meaning a later reopen would restore those stale values as if they should still be applied. Clicking "Live On The Edge" now clears the visible input fields, resets the in-memory offsets, and wipes the persisted browser storage together, so a later reopen starts genuinely fresh. Verified directly: values present before the click are gone from both the inputs and storage immediately after.
+
 ## v1.19.5 (EXPERIMENTAL — tooltip positioning, opacity, and border fixes)
 
 Three fixes to the "X & Y Offset" info tooltip introduced in v1.19.3, found from a real screenshot:
