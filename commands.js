@@ -2496,6 +2496,21 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           // N-number in the middle of an otherwise all-R-format profile).
           const fileUsesRFormat = moves.some(function(m) { return m.isRFormat; });
 
+          // Newly inserted corner-fillet lines get a real N-number too,
+          // not left blank - computed from the highest N found ANYWHERE
+          // in the whole file plus a counter, so it's guaranteed unique
+          // without needing to renumber every subsequent line to make
+          // room for a "properly sequential" number (which would mean
+          // touching potentially thousands of lines for one inserted
+          // fillet). It won't look sequential with its neighbors, but
+          // GRBL doesn't require N-numbers to be sequential or
+          // meaningful for execution - they're informational labels.
+          let nextInsertedN = 1;
+          const nMatches = fileContent.match(/N(\\d+)/g);
+          if (nMatches) {
+            nextInsertedN = Math.max.apply(null, nMatches.map(function(s) { return parseInt(s.substring(1), 10); })) + 1;
+          }
+
           // Lines where "R" means arc radius (this post processor's
           // R-format arcs), not a canned-cycle retract plane - the
           // Z-offset shift below must never touch these, or it corrupts
@@ -2731,7 +2746,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 lineNotes[chain[i].lineIndex] = noteText;
               }
               result.insertions.forEach(function(ins) {
-                insertions.push({ afterLineIndex: ins.afterLineIndex, text: twcArcGcodeLine(ins.element, ins.isRFormat) + ' (' + noteText + ')' });
+                insertions.push({ afterLineIndex: ins.afterLineIndex, text: 'N' + (nextInsertedN++) + ' ' + twcArcGcodeLine(ins.element, ins.isRFormat) + ' (' + noteText + ')' });
               });
             });
           });
