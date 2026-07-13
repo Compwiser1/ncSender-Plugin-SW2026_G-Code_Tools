@@ -1191,7 +1191,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // traveling, spinning flutes, LED, a continuous stream of
         // tumbling chips, a "processing" caption) is preserved.
         function twcBuildEndmillAnim(root) {
-          root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:linear-gradient(180deg, #242830 0%, #1a1e25 55%, #14171d 100%);';
+          root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:transparent;';
 
           const table = document.createElement('div');
           table.style.cssText = 'position:absolute; left:0; right:0; top:206px; height:14px; background:linear-gradient(180deg, #0e1015, #090a0d); box-shadow:0 -1px 0 rgba(255,255,255,0.07);';
