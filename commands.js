@@ -801,14 +801,23 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       .twc-endmill-travel {
         position: absolute; left: 0; top: 0; width: 1px; height: 1px;
-        animation: twc-endmill-travel 8s linear infinite;
+        animation: twc-endmill-travel 9s linear infinite;
       }
       @keyframes twc-endmill-travel {
-        0%   { transform: translate(-60px, -95px); }
-        10%  { transform: translate(-60px, -44px); }
-        55%  { transform: translate(1900px, -44px); }
-        65%  { transform: translate(1900px, -95px); }
-        100% { transform: translate(-60px, -95px); }
+        0%   { transform: translate(-60px, -106px); }
+        3%   { transform: translate(110px, -33.33px); }
+        28%  { transform: translate(1810px, -33.33px); }
+        31%  { transform: translate(1900px, -106px); }
+        33%  { transform: translate(-60px, -106px); }
+        36%  { transform: translate(110px, -6.67px); }
+        61%  { transform: translate(1810px, -6.67px); }
+        64%  { transform: translate(1900px, -106px); }
+        66%  { transform: translate(-60px, -106px); }
+        69%  { transform: translate(110px, 20px); }
+        94%  { transform: translate(1810px, 20px); }
+        97%  { transform: translate(1900px, -106px); }
+        99%  { transform: translate(-60px, -106px); }
+        100% { transform: translate(-60px, -106px); }
       }
 
       .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
@@ -817,12 +826,46 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .twc-endmill-led { animation: twc-led-pulse 0.6s ease-in-out infinite; }
       @keyframes twc-led-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
-      .twc-chip-wrap { animation: twc-chip-visibility 8s linear infinite; }
+      .twc-chip-wrap { animation: twc-chip-visibility 9s linear infinite; }
       @keyframes twc-chip-visibility {
-        0%, 12%   { opacity: 0; }
-        14%, 51%  { opacity: 1; }
-        53%, 100% { opacity: 0; }
+        0%, 2%    { opacity: 0; }
+        4%, 27%   { opacity: 1; }
+        29%, 35%  { opacity: 0; }
+        37%, 60%  { opacity: 1; }
+        62%, 68%  { opacity: 0; }
+        70%, 93%  { opacity: 1; }
+        95%, 100% { opacity: 0; }
       }
+
+      /* Each band's scaleX travels the exact same 110px-to-1810px range
+         the tool crosses during its own pass (3%-28%, 36%-61%, 69%-94%),
+         over the exact same percentage window, so the revealed edge
+         tracks the tool's position throughout the whole pass rather than
+         just matching up at the start and end. All three snap back to
+         hidden together right at the loop point, giving the block a
+         fresh look on the next cycle. */
+      .twc-remove-band-1 { animation: twc-remove-band-1 9s linear infinite; }
+      @keyframes twc-remove-band-1 {
+        0%, 3%     { transform: scaleX(0); }
+        28%        { transform: scaleX(1); }
+        99%        { transform: scaleX(1); }
+        99.5%, 100% { transform: scaleX(0); }
+      }
+      .twc-remove-band-2 { animation: twc-remove-band-2 9s linear infinite; }
+      @keyframes twc-remove-band-2 {
+        0%, 36%    { transform: scaleX(0); }
+        61%        { transform: scaleX(1); }
+        99%        { transform: scaleX(1); }
+        99.5%, 100% { transform: scaleX(0); }
+      }
+      .twc-remove-band-3 { animation: twc-remove-band-3 9s linear infinite; }
+      @keyframes twc-remove-band-3 {
+        0%, 69%    { transform: scaleX(0); }
+        94%        { transform: scaleX(1); }
+        99%        { transform: scaleX(1); }
+        99.5%, 100% { transform: scaleX(0); }
+      }
+
       .twc-chip {
         animation: twc-chip-fly 0.85s cubic-bezier(.25,.6,.35,1) infinite;
         transform: translate(0,0) rotate(0deg);
@@ -1199,6 +1242,18 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const stockHatch = document.createElement('div');
           stockHatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
           stock.appendChild(stockHatch);
+          // These bands sit on TOP of the stock's own gradient, so a
+          // literal transparent background would show nothing removed at
+          // all - they need to be painted with the modal's own actual
+          // background color instead, so a fully-revealed band reads as
+          // a genuine gap through to what's behind the animation.
+          const BAND_H = 80 / 3;
+          for (let i = 0; i < 3; i++) {
+            const band = document.createElement('div');
+            band.className = 'twc-remove-band twc-remove-band-' + (i + 1);
+            band.style.cssText = 'position:absolute; left:0; top:' + (i * BAND_H) + 'px; width:100%; height:' + BAND_H + 'px; background:var(--color-surface-muted, #1a1a1a); transform-origin:left; transform:scaleX(0);';
+            stock.appendChild(band);
+          }
           root.appendChild(stock);
 
           const caption = document.createElement('div');
