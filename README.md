@@ -1,10 +1,12 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.22.0 (EXPERIMENTAL layout — see note below)
+**Version**: 1.22.1 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
 **Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
 An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post processor**. This plugin **replaces Dynamic Tool Slot Mapper** — only one of the two should be enabled at a time.
+
+The dialog itself now shows a notice on open with a link to the latest post processor and plugin release, since this plugin only works correctly with G-code from that specific post processor.
 
 ---
 

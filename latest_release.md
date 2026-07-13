@@ -1,3 +1,7 @@
+## v1.22.1 (EXPERIMENTAL — post processor compatibility notice)
+
+**The dialog now shows a notice right at the top on every open**, letting the user know this plugin only works with G-code from the SW2026 FrankenOKO post processor, with a link to get it. The link uses GitHub's `/releases/latest` URL (`https://github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools/releases/latest`), which always redirects to whatever release is currently marked "Latest" on the repo - it never needs updating as new versions ship, unlike linking to a specific tagged release.
+
 ## v1.22.0 (EXPERIMENTAL — animated endmill replaces the plain spinner)
 
 **The loading popup's plain CSS spinner is replaced with the animated endmill design provided via Claude Design** - a flat endmill face-mills a bar of aluminum across a strip at the top of the popup, throwing chips, on a seamless 8-second loop (feed pass, retract, rapid return while the finished part slides out and a fresh blank slides in).
