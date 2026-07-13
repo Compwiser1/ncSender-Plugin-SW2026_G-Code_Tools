@@ -2496,20 +2496,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           // N-number in the middle of an otherwise all-R-format profile).
           const fileUsesRFormat = moves.some(function(m) { return m.isRFormat; });
 
-          // Newly inserted corner-fillet lines get a real N-number too,
-          // not left blank - computed from the highest N found ANYWHERE
-          // in the whole file plus a counter, so it's guaranteed unique
-          // without needing to renumber every subsequent line to make
-          // room for a "properly sequential" number (which would mean
-          // touching potentially thousands of lines for one inserted
-          // fillet). It won't look sequential with its neighbors, but
-          // GRBL doesn't require N-numbers to be sequential or
-          // meaningful for execution - they're informational labels.
-          let nextInsertedN = 1;
-          const nMatches = fileContent.match(/N(\\d+)/g);
-          if (nMatches) {
-            nextInsertedN = Math.max.apply(null, nMatches.map(function(s) { return parseInt(s.substring(1), 10); })) + 1;
-          }
+          // Newly inserted corner-fillet lines get a real, IN-SEQUENCE
+          // N-number, not a collision-avoiding-but-out-of-order one - a
+          // placeholder is used here, then the whole file's N-sequence
+          // is properly renumbered in one pass at the very end (see
+          // below), which is the only way to make an inserted line's
+          // number actually fit between its real neighbors rather than
+          // just being unique.
+          const TWC_INSERTED_N_PLACEHOLDER = 'N0';
 
           // Lines where "R" means arc radius (this post processor's
           // R-format arcs), not a canned-cycle retract plane - the
@@ -2746,7 +2740,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
                 lineNotes[chain[i].lineIndex] = noteText;
               }
               result.insertions.forEach(function(ins) {
-                insertions.push({ afterLineIndex: ins.afterLineIndex, text: 'N' + (nextInsertedN++) + ' ' + twcArcGcodeLine(ins.element, ins.isRFormat) + ' (' + noteText + ')' });
+                insertions.push({ afterLineIndex: ins.afterLineIndex, text: TWC_INSERTED_N_PLACEHOLDER + ' ' + twcArcGcodeLine(ins.element, ins.isRFormat) + ' (' + noteText + ')' });
               });
             });
           });
@@ -2854,6 +2848,35 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             if (insertionsByLine[i]) {
               insertionsByLine[i].forEach(function(t) { outLines.push(t); });
             }
+          }
+
+          // Renumber the whole N-sequence in one final pass, so a newly
+          // inserted line's number actually fits between its real
+          // neighbors instead of just being unique-but-out-of-order.
+          // Only lines that already start with an N-word (real original
+          // lines, plus every inserted line via its placeholder) get
+          // renumbered, continuing by 1 each time - matching this post
+          // processor's own step size, confirmed consistent across
+          // every sample file seen. The very first N-numbered line's own
+          // original value seeds the count, so the file's starting
+          // point is preserved; comment lines and any bare line that
+          // never had an N to begin with are left alone and don't
+          // consume a number. This does mean every real line's N-value
+          // after the first insertion point differs from the original
+          // file (shifted up by however many lines got inserted before
+          // it) - an unavoidable consequence of making inserted lines
+          // truly sequential rather than just collision-free.
+          let nCounter = null;
+          for (let k = 0; k < outLines.length; k++) {
+            const nMatch = outLines[k].match(/^(\\s*)N\\d+(\\s.*)?$/);
+            if (!nMatch) continue;
+            if (nCounter === null) {
+              const firstMatch = outLines[k].match(/^\\s*N(\\d+)/);
+              nCounter = firstMatch ? parseInt(firstMatch[1], 10) : 1;
+            } else {
+              nCounter += 1;
+            }
+            outLines[k] = outLines[k].replace(/^(\\s*)N\\d+/, '$1N' + nCounter);
           }
 
           return { success: true, content: outLines.join('\\r\\n'), warnings: warnings };
