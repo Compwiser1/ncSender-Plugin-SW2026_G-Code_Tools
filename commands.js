@@ -2317,7 +2317,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // chains' two free ends are left as simple translations - no
         // joining needed there, since they're real approach/depart
         // moves, not part of the enclosed boundary.
-        function offsetChainGeneral(chain, growAmount) {
+        function offsetChainGeneral(chain, growAmount, useRFormat) {
           const wind = twcWindingSign(chain);
           const offsetEls = [];
           for (let i = 0; i < chain.length; i++) {
@@ -2343,7 +2343,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const joined = twcJoinCorner(a, b, origVertex, growAmount);
             if (!joined) return { ok: false, kind: 'other', reason: 'a corner in this profile could not be closed cleanly' };
             if (joined.fillet) {
-              insertions.push({ afterLineIndex: chain[aIdx].lineIndex, element: joined.fillet, isRFormat: chain[aIdx].isRFormat });
+              insertions.push({ afterLineIndex: chain[aIdx].lineIndex, element: joined.fillet, isRFormat: useRFormat });
             } else {
               a.end = joined.vertex;
               b.start = joined.vertex;
@@ -2485,6 +2485,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const moves = parseFileMoves(fileContent);
           const allSamples = buildGeometrySamples(moves);
 
+          // Whether THIS FILE uses R-format arcs at all - determined
+          // once, file-wide, rather than inferred from whichever element
+          // happens to precede a given corner (a straight line has no
+          // arc format at all, so checking just the preceding element
+          // silently produced I/J-format inserted fillets even in an
+          // otherwise all-R-format file whenever a line preceded the
+          // corner - confirmed as a real bug from a reported file
+          // showing an inserted "G03 ... I0 J-0.99" line with no
+          // N-number in the middle of an otherwise all-R-format profile).
+          const fileUsesRFormat = moves.some(function(m) { return m.isRFormat; });
+
           // Lines where "R" means arc radius (this post processor's
           // R-format arcs), not a canned-cycle retract plane - the
           // Z-offset shift below must never touch these, or it corrupts
@@ -2523,7 +2534,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const xyValue = offset.xy;
             if (!xyValue) return;
 
-            const noteText = 'TWC: ' + twcSignedFixed(xyValue);
+            const noteText = 'TWC: [X/Y] ' + twcSignedFixed(xyValue);
 
             if (!op.twcDirection) {
               rawWarnings.push({
@@ -2661,7 +2672,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               if (chain.length < 3) return;
 
               const growAmount = computeGrowAmount(op.twcDirection, xyValue);
-              const result = offsetChainGeneral(chain, growAmount);
+              const result = offsetChainGeneral(chain, growAmount, fileUsesRFormat);
               if (!result.ok) {
                 if (result.kind === 'size') {
                   rawWarnings.push({ opNumber: op.opNumber, opName: op.opName, opIdx: idx, kind: 'size', maxSafe: opMaxSafe });
@@ -2821,7 +2832,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
               }
             }
             if (zChanged && !isComment) {
-              line = line + ' (TWC: ' + twcSignedFixed(z) + ')';
+              line = line + ' (TWC: [Z] ' + twcSignedFixed(z) + ')';
             }
 
             outLines.push(line);

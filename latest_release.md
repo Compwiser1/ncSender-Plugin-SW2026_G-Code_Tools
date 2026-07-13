@@ -1,3 +1,9 @@
+## v1.19.8 (EXPERIMENTAL — inserted fillets could wrongly use I/J in an R-format file; notes now labeled by axis)
+
+**Fixed a real bug found from a reported file: newly inserted corner-fillet arcs (from offsetting a general profile) could come out in I/J format even in a file that otherwise uses R-format exclusively.** The giveaway was an inserted line with no N-number reading `G03 X157.61 Y39.7078 I0 J-0.99` in the middle of an all-R-format profile. Root cause: the format decision was based on whichever element happened to immediately precede that specific corner - but a straight line has no arc format at all, so whenever a line preceded a corner needing a fillet, the check silently fell through to I/J regardless of the file's actual convention. Fixed by determining the file's R-format usage once, file-wide, and using that consistently for every inserted fillet instead of inferring it per-corner. Verified directly: the exact same inputs that previously produced `undefined` (and fell back to I/J) now correctly produce R-format output.
+
+**Notes now say which offset caused each change**, since a line touched by both a Z Offset and an X & Y Offset previously showed two identical-looking `(TWC: +0.20)` notes with no way to tell which was which. Now reads `(TWC: [Z] +0.20)` and `(TWC: [X/Y] -0.10)` respectively - a line touched by both gets both, clearly labeled.
+
 ## v1.19.7 (EXPERIMENTAL — Live On The Edge now resets to 0.00, zero values never show a sign)
 
 - **"Live On The Edge" now resets the Z/X&Y input fields to the literal text `0.00`** instead of leaving them blank.
