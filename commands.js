@@ -773,6 +773,29 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       }
       .twc-warning-fix { width: 90px; text-align: right; white-space: nowrap; }
       .twc-fix-btn { padding: 6px 16px; font-size: 0.78rem; }
+
+      .twc-spinner {
+        width: 44px; height: 44px;
+        border: 4px solid rgba(249,115,22,0.2);
+        border-top-color: #f97316;
+        border-radius: 50%;
+        margin: 4px auto 18px;
+        animation: twc-spin 0.8s linear infinite;
+      }
+      @keyframes twc-spin { to { transform: rotate(360deg); } }
+      .twc-processing-body p { text-align: left; }
+      .twc-processing-body p:first-of-type { text-align: center; font-weight: 600; margin-bottom: 16px; }
+
+      .wear-input.twc-longpressing {
+        transition: box-shadow 0.6s linear, border-color 0.6s linear;
+        box-shadow: inset 0 0 0 2px rgba(249,115,22,0.85);
+        border-color: #f97316;
+      }
+      .wear-input.twc-longpress-done {
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+        box-shadow: inset 0 0 0 2px rgba(40,167,69,0.85);
+        border-color: #28a745;
+      }
     </style>
 
     <div class="sw-container">
@@ -872,7 +895,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           <span class="twc-modal-title" id="twcModalTitle">Notice</span>
         </div>
         <div class="twc-modal-body" id="twcModalBody"></div>
-        <div class="twc-modal-actions">
+        <div class="twc-modal-actions" id="twcModalActions">
           <button id="twcModalCancelBtn" type="button" class="btn btn-glow-red" style="display:none;">Cancel</button>
           <button id="twcModalOkBtn" type="button" class="btn btn-glow-green">OK</button>
         </div>
@@ -1074,6 +1097,60 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             modalOverlay.classList.add('show');
           });
         }
+
+        // Shown while a potentially slow offset computation runs (large
+        // files with many operations/depth passes can take a real,
+        // noticeable amount of time to check every line). No OK/Cancel
+        // buttons - this isn't asking anything, it's just letting the
+        // person know work is happening and what that work actually is,
+        // with something to read while they wait. Dismissed
+        // programmatically via twcHideModal() once the real work
+        // finishes, not by user interaction.
+        function twcShowProcessingModal(title, paragraphs) {
+          const modalOverlay = document.getElementById('twcModalOverlay');
+          document.getElementById('twcModalTitle').textContent = title;
+          document.getElementById('twcModalIcon').textContent = '\u23F3';
+          const body = document.getElementById('twcModalBody');
+          body.className = 'twc-modal-body twc-processing-body';
+          body.innerHTML = '';
+
+          const spinner = document.createElement('div');
+          spinner.className = 'twc-spinner';
+          body.appendChild(spinner);
+
+          paragraphs.forEach(function(para) {
+            const p = document.createElement('p');
+            p.textContent = para;
+            body.appendChild(p);
+          });
+
+          document.getElementById('twcModalActions').style.display = 'none';
+          modalOverlay.classList.add('show');
+        }
+
+        function twcHideModal() {
+          const modalOverlay = document.getElementById('twcModalOverlay');
+          document.getElementById('twcModalActions').style.display = '';
+          document.getElementById('twcModalBody').className = 'twc-modal-body';
+          modalOverlay.classList.remove('show');
+        }
+
+        // A short pause after showing the processing modal, purely so
+        // the browser gets a chance to actually paint it before the
+        // heavy synchronous offset computation blocks the UI thread -
+        // without this, JS being single-threaded means the modal could
+        // be added to the DOM but never visually appear before the
+        // blocking work starts and finishes.
+        function twcYieldToRender() {
+          return new Promise(function(resolve) { setTimeout(resolve, 50); });
+        }
+
+        const TWC_PROCESSING_TEXT = [
+          'Tool Wear Compensation adjusts your G-code to account for the small amount of material lost as a cutting edge wears down over time.',
+          'For each operation: circular features (bores, bosses) are checked against their own radius, since an offset larger than the feature itself would invert it. General profiles are offset perpendicular to their own path, with corners re-joined to keep the toolpath continuous.',
+          'Every result is also checked against every other operation\\'s toolpath at the same cutting depth, to catch any accidental collision before anything is written.',
+          'Larger files with more operations and depth passes take longer to check, since every line is analyzed individually.'
+        ];
 
         function escapeHtml(s) {
           return String(s === null || s === undefined ? '' : s)
@@ -1811,6 +1888,66 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }
         }, true);
 
+        // Long press (~600ms) on a Z Offset or X & Y Offset field resets
+        // it to 0.00 - a quick way to clear a single value without
+        // selecting and retyping. A brief visual fill shows the hold
+        // building up, and a quick green flash confirms the reset.
+        const TWC_LONGPRESS_MS = 600;
+        let twcLongPressTimer = null;
+        let twcLongPressTarget = null;
+
+        function twcCancelLongPress() {
+          if (twcLongPressTimer) { clearTimeout(twcLongPressTimer); twcLongPressTimer = null; }
+          if (twcLongPressTarget) { twcLongPressTarget.classList.remove('twc-longpressing'); twcLongPressTarget = null; }
+        }
+
+        document.getElementById('wcTableBody').addEventListener('mousedown', function(e) {
+          const input = e.target.closest('.wear-input');
+          if (!input) return;
+          twcCancelLongPress();
+          twcLongPressTarget = input;
+          input.classList.add('twc-longpressing');
+          twcLongPressTimer = setTimeout(function() {
+            input.value = '0.00';
+            updateWearInputColor(input);
+            updateApplySafetyBtnState();
+            updateOpSectionStats();
+            twcCollectAndSaveCurrentValues();
+            input.classList.remove('twc-longpressing');
+            input.classList.add('twc-longpress-done');
+            setTimeout(function() { input.classList.remove('twc-longpress-done'); }, 300);
+            twcLongPressTimer = null;
+            twcLongPressTarget = null;
+          }, TWC_LONGPRESS_MS);
+        });
+
+        document.getElementById('wcTableBody').addEventListener('touchstart', function(e) {
+          const input = e.target.closest('.wear-input');
+          if (!input) return;
+          twcCancelLongPress();
+          twcLongPressTarget = input;
+          input.classList.add('twc-longpressing');
+          twcLongPressTimer = setTimeout(function() {
+            input.value = '0.00';
+            updateWearInputColor(input);
+            updateApplySafetyBtnState();
+            updateOpSectionStats();
+            twcCollectAndSaveCurrentValues();
+            input.classList.remove('twc-longpressing');
+            input.classList.add('twc-longpress-done');
+            setTimeout(function() { input.classList.remove('twc-longpress-done'); }, 300);
+            twcLongPressTimer = null;
+            twcLongPressTarget = null;
+          }, TWC_LONGPRESS_MS);
+        }, { passive: true });
+
+        // Release listeners live on the document, not just wcTableBody -
+        // a mouse can move off the input (or the whole table) before
+        // release, and that should still cancel the pending long press.
+        document.addEventListener('mouseup', twcCancelLongPress);
+        document.addEventListener('touchend', twcCancelLongPress);
+        document.addEventListener('touchcancel', twcCancelLongPress);
+
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
           if (e.key !== 'Enter' && e.key !== ' ') return;
           const arrow = e.target.closest('.wear-arrow');
@@ -1830,9 +1967,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
           btn.disabled = true;
           btn.textContent = 'Checking\\u2026';
+          twcShowProcessingModal('Checking Your Offset(s)\\u2026', TWC_PROCESSING_TEXT);
           try {
+            await twcYieldToRender();
             const fileContent = await fetchOriginalContent();
             const result = applyRadialAndZOffsets(fileContent, offsets);
+            twcHideModal();
             btn.disabled = false;
             btn.textContent = 'Apply Offset';
             if (result.warnings.length > 0) {
@@ -1842,6 +1982,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             twcSaveStoredValues(offsets);
             setOpSectionState('ready');
           } catch (err) {
+            twcHideModal();
             btn.disabled = false;
             btn.textContent = 'Apply Offset';
             await twcAlert('Failed to validate the offset(s): ' + (err && err.message ? err.message : err));
@@ -2964,7 +3105,10 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             }
 
             if (opSectionState === 'ready') {
+              twcShowProcessingModal('Checking Your Offset(s)\\u2026', TWC_PROCESSING_TEXT);
+              await twcYieldToRender();
               const twcResult = applyRadialAndZOffsets(fileContent, storedWearOffsets);
+              twcHideModal();
               if (twcResult.warnings.length > 0) {
                 const proceed = await twcShowWarningTable('Some Geometry Could Not Be Offset', twcResult.warnings, 'Everything else will still be applied. Continue?', true);
                 if (!proceed) {
@@ -3003,6 +3147,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
             window.parent.postMessage({ type: 'close-plugin-dialog', data: { action: 'life' } }, '*');
           } catch (err) {
+            twcHideModal();
             btn.disabled = false;
             btn.innerHTML = '<span class="btn-life-icon">&#9889;</span> Bring This G-Code To Life!';
             await twcAlert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
