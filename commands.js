@@ -804,11 +804,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         animation: twc-endmill-travel 8s linear infinite;
       }
       @keyframes twc-endmill-travel {
-        0%   { transform: translate(-60px, -44px); }
-        45%  { transform: translate(1900px, -44px); }
-        55%  { transform: translate(1900px, -95px); }
-        90%  { transform: translate(-60px, -95px); }
-        100% { transform: translate(-60px, -44px); }
+        0%   { transform: translate(-60px, -95px); }
+        10%  { transform: translate(-60px, -44px); }
+        55%  { transform: translate(1900px, -44px); }
+        65%  { transform: translate(1900px, -95px); }
+        100% { transform: translate(-60px, -95px); }
       }
 
       .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
@@ -819,9 +819,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       .twc-chip-wrap { animation: twc-chip-visibility 8s linear infinite; }
       @keyframes twc-chip-visibility {
-        0%, 2%    { opacity: 0; }
-        4%, 43%   { opacity: 1; }
-        46%, 100% { opacity: 0; }
+        0%, 12%   { opacity: 0; }
+        14%, 51%  { opacity: 1; }
+        53%, 100% { opacity: 0; }
       }
       .twc-chip {
         animation: twc-chip-fly 0.85s cubic-bezier(.25,.6,.35,1) infinite;
