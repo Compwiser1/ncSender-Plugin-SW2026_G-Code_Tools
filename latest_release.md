@@ -1,3 +1,11 @@
+## v1.22.0 (EXPERIMENTAL — animated endmill replaces the plain spinner)
+
+**The loading popup's plain CSS spinner is replaced with the animated endmill design provided via Claude Design** - a flat endmill face-mills a bar of aluminum across a strip at the top of the popup, throwing chips, on a seamless 8-second loop (feed pass, retract, rapid return while the finished part slides out and a fresh blank slides in).
+
+The supplied file was a full React scene built for Claude Design's own "omelette" authoring framework (a `Stage`/`Sprite` timeline engine with video export, playback scrubber, etc.) - none of which exists in this dialog, which is plain HTML/JS with no React. Ported the actual scene logic (gradients, the spindle/collet/shank/flute assembly, the 32-particle chip system with real projectile-motion physics, the stock swap) into vanilla JS driven by a plain `requestAnimationFrame` loop, at the exact same coordinate system, timing, and easing curves as the original - scaled down to fit the popup via a CSS transform rather than hand-recomputing every position at a smaller size, so nothing needed re-tuning.
+
+Verified directly, not just "no errors thrown": ran the actual embedded code (extracted from the real generated dialog, not a hand-copy) through a full cycle and confirmed 31-32 of 32 chips are correctly active with realistic physics during the cutting phase, the endmill's tracked position matches the feed pass, and the stock correctly slides out/in during the swap phase. Caught and fixed one real bug in the process: the scale-to-fit transform was being silently wiped out because the animation's own setup code overwrites the container's full style string as its first action - fixed by applying the transform after that setup runs instead of before.
+
 ## v1.21.0 (EXPERIMENTAL — long-press to reset, loading popup while checking offsets)
 
 **Long press (~0.6s) on any Z Offset or X & Y Offset field resets just that field to 0.00** - a quick way to clear one value without selecting and retyping. Shows a brief orange fill building up while held, and a quick green flash confirming the reset when it triggers; releasing early (a normal click, to type a value) cancels it with no change. Release is tracked at the document level, not just the input, so moving the mouse or finger off before releasing still correctly cancels it.

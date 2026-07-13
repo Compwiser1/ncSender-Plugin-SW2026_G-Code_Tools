@@ -1106,17 +1106,326 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // with something to read while they wait. Dismissed
         // programmatically via twcHideModal() once the real work
         // finishes, not by user interaction.
+        // Vanilla-JS port of a Claude Design "omelette" scene (endmill-scene.jsx):
+        // a flat endmill face-mills an aluminum bar across a strip, throwing
+        // chips, on a seamless 8s loop (feed pass -> retract -> rapid return
+        // while the finished part slides out and a fresh blank slides in).
+        // Reimplemented without React/the Stage timeline framework - this
+        // dialog has neither available - using the exact same coordinate
+        // system, easing curves, and chip-particle physics, driven by a
+        // plain requestAnimationFrame loop updating element styles directly.
+        function twcInitEndmillAnim(root, opts) {
+          opts = opts || {};
+          const speed = opts.speed || 1;
+          const W = 1920, H = 220, CYCLE = 8;
+          const STOCK_L = 110, STOCK_R = 1810, SW = STOCK_R - STOCK_L, GAP = 140;
+          const RAW_TOP = 126, MACH_TOP = 144, STOCK_BOT = 206;
+          const CUT_BOT = 145, RETRACT_BOT = 96;
+          const FEED_START = 0.6, FEED_END = 6.3, RETRACT_END = 6.7, RETURN_END = 7.9;
+          const N_CHIPS = 32;
+
+          function mod(a, b) { return ((a % b) + b) % b; }
+          function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+          function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+          const Easing = {
+            linear: (t) => t,
+            easeOutCubic: (t) => (--t) * t * t + 1,
+            easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+            easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t),
+            easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
+          };
+
+          function interpolate(input, output, ease) {
+            return (t) => {
+              if (t <= input[0]) return output[0];
+              if (t >= input[input.length - 1]) return output[output.length - 1];
+              for (let i = 0; i < input.length - 1; i++) {
+                if (t >= input[i] && t <= input[i + 1]) {
+                  const span = input[i + 1] - input[i];
+                  const local = span === 0 ? 0 : (t - input[i]) / span;
+                  const easeFn = Array.isArray(ease) ? (ease[i] || Easing.linear) : (ease || Easing.linear);
+                  return output[i] + (output[i + 1] - output[i]) * easeFn(local);
+                }
+              }
+              return output[output.length - 1];
+            };
+          }
+
+          const cutterXAt = interpolate(
+            [0, FEED_START, FEED_END, RETRACT_END, RETURN_END, CYCLE],
+            [-90, 100, 1830, 1830, -90, -90],
+            [Easing.linear, Easing.linear, Easing.linear, Easing.easeInOutQuart, Easing.linear]
+          );
+          const toolBottomAt = interpolate(
+            [0, FEED_END, RETRACT_END, 7.84, 7.98, CYCLE],
+            [CUT_BOT, CUT_BOT, RETRACT_BOT, RETRACT_BOT, CUT_BOT, CUT_BOT],
+            [Easing.linear, Easing.easeOutCubic, Easing.linear, Easing.easeInOutQuad, Easing.linear]
+          );
+          const swapAt = interpolate([6.75, 7.75], [0, 1], Easing.easeInOutCubic);
+
+          const pal = {
+            bg: 'linear-gradient(180deg, #242830 0%, #1a1e25 55%, #14171d 100%)',
+            table: 'linear-gradient(180deg, #0e1015, #090a0d)',
+            tableEdge: 'rgba(255,255,255,0.07)',
+            chipHi: '#f2f5f9', chipLo: '#98a0ac',
+            stockShadow: '0 6px 18px rgba(0,0,0,0.45)',
+          };
+
+          root.style.cssText = 'position:relative; width:' + W + 'px; height:' + H + 'px; overflow:hidden; background:' + pal.bg + ';';
+
+          const table = document.createElement('div');
+          table.style.cssText = 'position:absolute; left:0; right:0; top:' + STOCK_BOT + 'px; height:' + (H - STOCK_BOT) + 'px; background:' + pal.table + '; box-shadow:0 -1px 0 ' + pal.tableEdge + ';';
+          root.appendChild(table);
+
+          function buildStock() {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'position:absolute; left:0; top:0; width:' + SW + 'px; height:' + H + 'px; pointer-events:none;';
+
+            const base = document.createElement('div');
+            base.style.cssText = 'position:absolute; left:0; top:' + MACH_TOP + 'px; width:' + SW + 'px; height:' + (STOCK_BOT - MACH_TOP) + 'px; background:linear-gradient(180deg, #c6ccd4 0%, #a9afb9 30%, #8c929c 75%, #767b84 100%); border-radius:0 0 3px 3px; box-shadow:' + pal.stockShadow + ';';
+            wrap.appendChild(base);
+
+            const machBand = document.createElement('div');
+            machBand.style.cssText = 'position:absolute; left:0; top:' + MACH_TOP + 'px; height:8px; background:linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.12) 65%, transparent); overflow:hidden;';
+            const machStripe = document.createElement('div');
+            machStripe.style.cssText = 'position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0 2px, transparent 2px 13px);';
+            machBand.appendChild(machStripe);
+            wrap.appendChild(machBand);
+
+            const raw = document.createElement('div');
+            raw.style.cssText = 'position:absolute; top:' + RAW_TOP + 'px; height:' + (MACH_TOP - RAW_TOP) + 'px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 60%, #8b919b 100%);';
+            const scale = document.createElement('div');
+            scale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
+            raw.appendChild(scale);
+            const hatch = document.createElement('div');
+            hatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
+            raw.appendChild(hatch);
+            wrap.appendChild(raw);
+
+            [14, SW - 58].forEach(function(cx) {
+              const clampEl = document.createElement('div');
+              clampEl.style.cssText = 'position:absolute; left:' + cx + 'px; top:176px; width:44px; height:' + (STOCK_BOT - 176 + 4) + 'px; background:linear-gradient(180deg, #4a505a, #33383f); border-radius:4px 4px 0 0; box-shadow:inset 0 2px 0 rgba(255,255,255,0.18);';
+              const bolt = document.createElement('div');
+              bolt.style.cssText = 'position:absolute; left:50%; top:8px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #7d848f, #23272d 70%);';
+              clampEl.appendChild(bolt);
+              wrap.appendChild(clampEl);
+            });
+
+            return { wrap: wrap, machBand: machBand, raw: raw };
+          }
+
+          const stockA = buildStock();
+          const stockB = buildStock();
+          root.appendChild(stockA.wrap);
+          root.appendChild(stockB.wrap);
+
+          function renderStock(s, left, machinedUpTo) {
+            if (left > W + 20 || left + SW < -20) { s.wrap.style.display = 'none'; return; }
+            s.wrap.style.display = 'block';
+            s.wrap.style.left = left + 'px';
+            const rawStartRel = clamp(machinedUpTo - left, 0, SW);
+            const machined = rawStartRel > 2;
+            s.machBand.style.width = rawStartRel + 'px';
+            s.machBand.style.display = machined ? 'block' : 'none';
+            if (rawStartRel < SW - 1) {
+              s.raw.style.display = 'block';
+              s.raw.style.left = rawStartRel + 'px';
+              s.raw.style.width = (SW - rawStartRel) + 'px';
+              s.raw.style.borderRadius = machined ? '9px 0 0 0' : '0';
+              s.raw.style.boxShadow = machined ? 'inset 3px 0 0 rgba(255,255,255,0.5)' : 'none';
+            } else {
+              s.raw.style.display = 'none';
+            }
+          }
+
+          const shadow = document.createElement('div');
+          shadow.style.cssText = 'position:absolute; width:88px; height:10px; border-radius:50%; background:rgba(0,0,0,0.28); filter:blur(4px); pointer-events:none;';
+          root.appendChild(shadow);
+
+          const glint = document.createElement('div');
+          glint.style.cssText = 'position:absolute; width:56px; height:40px; background:radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(215,230,255,0.4) 55%, transparent); filter:blur(1px); pointer-events:none;';
+          root.appendChild(glint);
+
+          const chipPool = document.createElement('div');
+          chipPool.style.cssText = 'position:absolute; inset:0; pointer-events:none;';
+          root.appendChild(chipPool);
+          const chipEls = [];
+          for (let i = 0; i < N_CHIPS; i++) {
+            const c = document.createElement('div');
+            c.style.cssText = 'position:absolute; border-radius:70% 30% 60% 40%; box-shadow:0 0 2px rgba(255,255,255,0.3); display:none;';
+            chipPool.appendChild(c);
+            chipEls.push(c);
+          }
+
+          const endmill = document.createElement('div');
+          endmill.style.cssText = 'position:absolute; width:104px; pointer-events:none;';
+          const totalH = 64 + 26 + 18 + 74;
+          endmill.style.height = totalH + 'px';
+          root.appendChild(endmill);
+
+          const housing = document.createElement('div');
+          housing.style.cssText = 'position:absolute; left:0; top:0; width:104px; height:64px; background:linear-gradient(90deg, #23262c, #3c4149 30%, #4a505a 50%, #383d45 72%, #1f2228); border-radius:0 0 12px 12px; box-shadow:0 4px 10px rgba(0,0,0,0.35);';
+          const housingLine = document.createElement('div');
+          housingLine.style.cssText = 'position:absolute; left:10px; right:10px; top:40px; height:2px; background:rgba(0,0,0,0.4);';
+          housing.appendChild(housingLine);
+          const led = document.createElement('div');
+          led.style.cssText = 'position:absolute; right:14px; top:48px; width:7px; height:7px; border-radius:50%;';
+          housing.appendChild(led);
+          endmill.appendChild(housing);
+
+          const collet = document.createElement('div');
+          collet.style.cssText = 'position:absolute; left:15px; top:64px; width:74px; height:26px; clip-path:polygon(0 0, 100% 0, 84% 100%, 16% 100%); background:linear-gradient(90deg, #565c66, #9aa1ab 32%, #c3c9d1 50%, #8d949e 70%, #494f58);';
+          const colletLine = document.createElement('div');
+          colletLine.style.cssText = 'position:absolute; left:0; right:0; top:12px; height:2px; background:rgba(0,0,0,0.3);';
+          collet.appendChild(colletLine);
+          endmill.appendChild(collet);
+
+          const shank = document.createElement('div');
+          shank.style.cssText = 'position:absolute; left:35px; top:90px; width:34px; height:18px; background:linear-gradient(90deg, #6a7079, #b9bfc8 40%, #d9dee5 52%, #a5abb5 68%, #5d636c);';
+          endmill.appendChild(shank);
+
+          const flutes = document.createElement('div');
+          flutes.style.cssText = 'position:absolute; left:22px; top:108px; width:60px; height:74px; border-radius:0 0 7px 7px; overflow:hidden;';
+          const fluteStripe = document.createElement('div');
+          fluteStripe.style.cssText = 'position:absolute; inset:0; background:repeating-linear-gradient(64deg, #1c1f24 0px 7px, #8d95a1 7px 10px, #e9eef4 10px 14px);';
+          flutes.appendChild(fluteStripe);
+          const fluteShade = document.createElement('div');
+          fluteShade.style.cssText = 'position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.05) 26%, rgba(255,255,255,0.4) 46%, rgba(255,255,255,0.05) 62%, rgba(0,0,0,0.55));';
+          flutes.appendChild(fluteShade);
+          endmill.appendChild(flutes);
+
+          const tip = document.createElement('div');
+          tip.style.cssText = 'position:absolute; left:22px; width:60px; height:9px; border-radius:50%; background:linear-gradient(90deg, #2a2e34, #6c737d 50%, #262a30);';
+          tip.style.top = (totalH - 5) + 'px';
+          endmill.appendChild(tip);
+
+          function renderChips(t) {
+            for (let i = 0; i < N_CHIPS; i++) {
+              const el = chipEls[i];
+              const r1 = rnd(i * 5 + 1), r2 = rnd(i * 5 + 2), r3 = rnd(i * 5 + 3), r4 = rnd(i * 5 + 4), r5 = rnd(i * 5 + 5);
+              const P = 0.5 + r1 * 0.5;
+              const age = mod(t - r2 * 10, P);
+              const spawn = t - age;
+              if (spawn < FEED_START + 0.05 || spawn > FEED_END - 0.03) { el.style.display = 'none'; continue; }
+              const sx = cutterXAt(spawn);
+              if (sx < STOCK_L + 24 || sx > STOCK_R - 8) { el.style.display = 'none'; continue; }
+              const back = r3 < 0.72;
+              const vx = back ? -(150 + r4 * 320) : (80 + r4 * 190);
+              const vy = -(190 + r5 * 320);
+              const x = sx - 16 + vx * age;
+              const y = RAW_TOP + 4 + vy * age + 0.5 * 980 * age * age;
+              if (y > H + 24 || x < -24) { el.style.display = 'none'; continue; }
+              const life = age / P;
+              const o = life < 0.12 ? life / 0.12 : (life > 0.68 ? 1 - (life - 0.68) / 0.32 : 1);
+              const sSize = 5 + r4 * 8;
+              const rot = r5 * 360 + age * (back ? -1 : 1) * 1000;
+              el.style.display = 'block';
+              el.style.left = x + 'px';
+              el.style.top = y + 'px';
+              el.style.width = sSize + 'px';
+              el.style.height = (sSize * 0.7) + 'px';
+              el.style.background = 'linear-gradient(135deg, ' + pal.chipHi + ', ' + pal.chipLo + ' 60%, #c6ccd5)';
+              el.style.opacity = o;
+              el.style.transform = 'rotate(' + rot + 'deg)';
+            }
+          }
+
+          function render(t) {
+            const cx = cutterXAt(t);
+            const bottom = toolBottomAt(t);
+            const cutting = t > FEED_START - 0.02 && t < FEED_END && cx > STOCK_L + 18 && cx < STOCK_R;
+            const s = swapAt(t);
+            const shift = s * (SW + GAP);
+            const machinedUpTo = t < FEED_START ? -1e9 : (t > FEED_END ? 1e9 : cx + 8);
+
+            renderStock(stockA, STOCK_L - shift, machinedUpTo);
+            if (s > 0.001) {
+              renderStock(stockB, STOCK_L - shift + SW + GAP, -1e9);
+            } else {
+              stockB.wrap.style.display = 'none';
+            }
+
+            if (cx > STOCK_L - 40 && cx < STOCK_R + 40) {
+              shadow.style.display = 'block';
+              shadow.style.left = (cx - 44) + 'px';
+              shadow.style.top = (bottom - 3) + 'px';
+            } else {
+              shadow.style.display = 'none';
+            }
+
+            renderChips(t);
+
+            const glintO = cutting ? 0.55 + 0.45 * Math.sin(t * 43) : 0;
+            if (cutting) {
+              glint.style.display = 'block';
+              glint.style.left = (cx - 44) + 'px';
+              glint.style.top = (RAW_TOP - 14) + 'px';
+              glint.style.opacity = glintO;
+            } else {
+              glint.style.display = 'none';
+            }
+
+            const jx = cutting ? Math.sin(t * 151) * 0.7 : 0;
+            const jy = cutting ? Math.sin(t * 137 + 2) * 0.9 : 0;
+            endmill.style.left = (cx - 52 + jx) + 'px';
+            endmill.style.top = (bottom - totalH + jy) + 'px';
+
+            const spin = -mod(t * 2400, 168);
+            fluteStripe.style.backgroundPosition = spin + 'px 0';
+
+            const ledColor = cutting ? '#ffc266' : '#7ee08a';
+            const ledPulse = 0.65 + 0.35 * Math.sin(t * 10);
+            led.style.background = ledColor;
+            led.style.opacity = ledPulse;
+            led.style.boxShadow = '0 0 6px ' + ledColor;
+          }
+
+          let rafId = null;
+          let startTs = null;
+          function frame(ts) {
+            if (startTs === null) startTs = ts;
+            const elapsed = ((ts - startTs) / 1000) * speed;
+            const t = mod(elapsed, CYCLE);
+            render(t);
+            rafId = requestAnimationFrame(frame);
+          }
+          rafId = requestAnimationFrame(frame);
+
+          return function stop() {
+            if (rafId) cancelAnimationFrame(rafId);
+          };
+        }
+
+        let twcStopEndmillAnim = null;
+
         function twcShowProcessingModal(title, paragraphs) {
           const modalOverlay = document.getElementById('twcModalOverlay');
+          const modalCard = document.getElementById('twcModalCard');
           document.getElementById('twcModalTitle').textContent = title;
           document.getElementById('twcModalIcon').textContent = '\u23F3';
           const body = document.getElementById('twcModalBody');
           body.className = 'twc-modal-body twc-processing-body';
           body.innerHTML = '';
 
-          const spinner = document.createElement('div');
-          spinner.className = 'twc-spinner';
-          body.appendChild(spinner);
+          const animOuter = document.createElement('div');
+          animOuter.style.cssText = 'width:100%; max-width:860px; margin:0 auto 16px; overflow:hidden; border-radius:8px;';
+          const animInner = document.createElement('div');
+          animOuter.appendChild(animInner);
+          body.appendChild(animOuter);
+
+          if (twcStopEndmillAnim) { twcStopEndmillAnim(); twcStopEndmillAnim = null; }
+          twcStopEndmillAnim = twcInitEndmillAnim(animInner, { speed: 1 });
+
+          // Scale is applied AFTER init, not before - twcInitEndmillAnim
+          // sets root.style.cssText itself as its first action, which
+          // would otherwise silently wipe out any transform set here
+          // beforehand (a real bug caught by inspecting the actual
+          // resulting cssText, not just checking for thrown errors).
+          const animScale = 860 / 1920;
+          animInner.style.transformOrigin = 'top left';
+          animInner.style.transform = 'scale(' + animScale + ')';
+          animInner.style.marginBottom = (220 * animScale - 220) + 'px';
 
           paragraphs.forEach(function(para) {
             const p = document.createElement('p');
@@ -1125,13 +1434,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           });
 
           document.getElementById('twcModalActions').style.display = 'none';
+          modalCard.classList.add('twc-modal--wide');
           modalOverlay.classList.add('show');
         }
 
         function twcHideModal() {
           const modalOverlay = document.getElementById('twcModalOverlay');
+          const modalCard = document.getElementById('twcModalCard');
+          if (twcStopEndmillAnim) { twcStopEndmillAnim(); twcStopEndmillAnim = null; }
           document.getElementById('twcModalActions').style.display = '';
           document.getElementById('twcModalBody').className = 'twc-modal-body';
+          modalCard.classList.remove('twc-modal--wide');
           modalOverlay.classList.remove('show');
         }
 
