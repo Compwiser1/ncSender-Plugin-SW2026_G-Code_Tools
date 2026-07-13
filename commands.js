@@ -790,15 +790,52 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .twc-warning-fix { width: 90px; text-align: right; white-space: nowrap; }
       .twc-fix-btn { padding: 6px 16px; font-size: 0.78rem; }
 
-      .twc-spinner {
-        width: 44px; height: 44px;
-        border: 4px solid rgba(249,115,22,0.2);
-        border-top-color: #f97316;
-        border-radius: 50%;
-        margin: 4px auto 18px;
-        animation: twc-spin 0.8s linear infinite;
+      .twc-endmill-caption {
+        position: absolute; left: 24px; top: 18px;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 20px; font-weight: 600; letter-spacing: 0.16em;
+        text-transform: uppercase; color: #98a1ad;
+        animation: twc-caption-flash 1.2s ease-in-out infinite;
       }
-      @keyframes twc-spin { to { transform: rotate(360deg); } }
+      @keyframes twc-caption-flash { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+      .twc-endmill-travel {
+        position: absolute; left: 0; top: 0; width: 1px; height: 1px;
+        animation: twc-endmill-travel 8s linear infinite;
+      }
+      @keyframes twc-endmill-travel {
+        0%   { transform: translate(-90px, -37px); }
+        7%   { transform: translate(100px, -37px); }
+        75%  { transform: translate(1830px, -37px); }
+        82%  { transform: translate(1830px, -86px); }
+        95%  { transform: translate(-60px, -86px); }
+        99%  { transform: translate(-90px, -37px); }
+        100% { transform: translate(-90px, -37px); }
+      }
+
+      .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
+      @keyframes twc-flute-spin { from { transform: translateX(0); } to { transform: translateX(-168px); } }
+
+      .twc-endmill-led { animation: twc-led-pulse 0.6s ease-in-out infinite; }
+      @keyframes twc-led-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+      .twc-chip-wrap { animation: twc-chip-visibility 8s linear infinite; }
+      @keyframes twc-chip-visibility {
+        0%, 5%   { opacity: 0; }
+        8%, 73%  { opacity: 1; }
+        77%, 100% { opacity: 0; }
+      }
+      .twc-chip {
+        animation: twc-chip-fly 0.85s cubic-bezier(.25,.6,.35,1) infinite;
+        transform: translate(0,0) rotate(0deg);
+        opacity: 0;
+      }
+      @keyframes twc-chip-fly {
+        0%   { transform: translate(0,0) rotate(0deg); opacity: 0; }
+        12%  { opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 0; }
+      }
+
       .twc-processing-body p { text-align: left; }
       .twc-processing-body p:first-of-type { text-align: center; font-weight: 600; margin-bottom: 16px; }
 
@@ -818,7 +855,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       <div class="sw-compat-notice">
         <span aria-hidden="true">&#9888;&#65039;</span>
         <span>This plugin only works with G-code from the SW2026 FrankenOKO post processor.</span>
-        <a href="https://github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools/releases/latest" target="_blank" rel="noopener">Get the latest post processor &amp; plugin release &#8599;</a>
+        <a href="https://github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools/releases/latest" id="swReleaseLink" rel="noopener">Get the latest post processor &amp; plugin release &#8599;</a>
       </div>
       <div class="sw-section" id="toolSection">
         <div class="sw-section-header" id="toolSectionHeader">
@@ -1135,171 +1172,68 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // dialog has neither available - using the exact same coordinate
         // system, easing curves, and chip-particle physics, driven by a
         // plain requestAnimationFrame loop updating element styles directly.
-        function twcInitEndmillAnim(root, opts) {
-          opts = opts || {};
-          const speed = opts.speed || 1;
-          const W = 1920, H = 220, CYCLE = 8;
-          const STOCK_L = 110, STOCK_R = 1810, SW = STOCK_R - STOCK_L, GAP = 140;
-          const RAW_TOP = 126, MACH_TOP = 144, STOCK_BOT = 206;
-          const CUT_BOT = 145, RETRACT_BOT = 96;
-          const FEED_START = 0.6, FEED_END = 6.3, RETRACT_END = 6.7, RETURN_END = 7.9;
-          const N_CHIPS = 32;
-
-          function mod(a, b) { return ((a % b) + b) % b; }
-          function rnd(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
-          function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-
-          const Easing = {
-            linear: (t) => t,
-            easeOutCubic: (t) => (--t) * t * t + 1,
-            easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-            easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t),
-            easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
-          };
-
-          function interpolate(input, output, ease) {
-            return (t) => {
-              if (t <= input[0]) return output[0];
-              if (t >= input[input.length - 1]) return output[output.length - 1];
-              for (let i = 0; i < input.length - 1; i++) {
-                if (t >= input[i] && t <= input[i + 1]) {
-                  const span = input[i + 1] - input[i];
-                  const local = span === 0 ? 0 : (t - input[i]) / span;
-                  const easeFn = Array.isArray(ease) ? (ease[i] || Easing.linear) : (ease || Easing.linear);
-                  return output[i] + (output[i + 1] - output[i]) * easeFn(local);
-                }
-              }
-              return output[output.length - 1];
-            };
-          }
-
-          const cutterXAt = interpolate(
-            [0, FEED_START, FEED_END, RETRACT_END, RETURN_END, CYCLE],
-            [-90, 100, 1830, 1830, -90, -90],
-            [Easing.linear, Easing.linear, Easing.linear, Easing.easeInOutQuart, Easing.linear]
-          );
-          const toolBottomAt = interpolate(
-            [0, FEED_END, RETRACT_END, 7.84, 7.98, CYCLE],
-            [CUT_BOT, CUT_BOT, RETRACT_BOT, RETRACT_BOT, CUT_BOT, CUT_BOT],
-            [Easing.linear, Easing.easeOutCubic, Easing.linear, Easing.easeInOutQuad, Easing.linear]
-          );
-          const swapAt = interpolate([6.75, 7.75], [0, 1], Easing.easeInOutCubic);
-
-          const pal = {
-            bg: 'linear-gradient(180deg, #242830 0%, #1a1e25 55%, #14171d 100%)',
-            table: 'linear-gradient(180deg, #0e1015, #090a0d)',
-            tableEdge: 'rgba(255,255,255,0.07)',
-            chipHi: '#f2f5f9', chipLo: '#98a0ac',
-            stockShadow: '0 6px 18px rgba(0,0,0,0.45)',
-          };
-
-          root.style.cssText = 'position:relative; width:' + W + 'px; height:' + H + 'px; overflow:hidden; background:' + pal.bg + ';';
+        // Pure CSS animation - the endmill scene from Claude Design was
+        // ported once as a requestAnimationFrame + per-frame JS style
+        // update loop, but that approach silently freezes: JS is
+        // single-threaded, and the offset check this modal covers for is
+        // a genuinely heavy, fully SYNCHRONOUS computation that blocks
+        // the main thread for the whole wait - during which NO rAF
+        // callback can run at all, so a JS-driven animation goes
+        // completely static for almost the entire time it's visible.
+        // CSS @keyframes animations on transform/opacity run on the
+        // browser's compositor thread instead, independent of the
+        // blocked JS thread, so they keep animating smoothly regardless
+        // of how long the computation takes. This does mean some of the
+        // original scene's JS-only touches (the per-tool-position
+        // machined/raw reveal wipe, the swap-in of a fresh blank part)
+        // aren't reproduced here, since those specifically depended on
+        // per-frame JS computation - the core identity (endmill
+        // traveling, spinning flutes, LED, a continuous stream of
+        // tumbling chips, a "processing" caption) is preserved.
+        function twcBuildEndmillAnim(root) {
+          root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:linear-gradient(180deg, #242830 0%, #1a1e25 55%, #14171d 100%);';
 
           const table = document.createElement('div');
-          table.style.cssText = 'position:absolute; left:0; right:0; top:' + STOCK_BOT + 'px; height:' + (H - STOCK_BOT) + 'px; background:' + pal.table + '; box-shadow:0 -1px 0 ' + pal.tableEdge + ';';
+          table.style.cssText = 'position:absolute; left:0; right:0; top:206px; height:14px; background:linear-gradient(180deg, #0e1015, #090a0d); box-shadow:0 -1px 0 rgba(255,255,255,0.07);';
           root.appendChild(table);
 
-          function buildStock() {
-            const wrap = document.createElement('div');
-            wrap.style.cssText = 'position:absolute; left:0; top:0; width:' + SW + 'px; height:' + H + 'px; pointer-events:none;';
+          const stock = document.createElement('div');
+          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%); box-shadow:0 6px 18px rgba(0,0,0,0.45);';
+          const stockScale = document.createElement('div');
+          stockScale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
+          stock.appendChild(stockScale);
+          const stockHatch = document.createElement('div');
+          stockHatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
+          stock.appendChild(stockHatch);
+          root.appendChild(stock);
 
-            const base = document.createElement('div');
-            base.style.cssText = 'position:absolute; left:0; top:' + MACH_TOP + 'px; width:' + SW + 'px; height:' + (STOCK_BOT - MACH_TOP) + 'px; background:linear-gradient(180deg, #c6ccd4 0%, #a9afb9 30%, #8c929c 75%, #767b84 100%); border-radius:0 0 3px 3px; box-shadow:' + pal.stockShadow + ';';
-            wrap.appendChild(base);
+          const caption = document.createElement('div');
+          caption.className = 'twc-endmill-caption';
+          caption.textContent = 'Processing...';
+          root.appendChild(caption);
 
-            const machBand = document.createElement('div');
-            machBand.style.cssText = 'position:absolute; left:0; top:' + MACH_TOP + 'px; height:8px; background:linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.12) 65%, transparent); overflow:hidden;';
-            const machStripe = document.createElement('div');
-            machStripe.style.cssText = 'position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0 2px, transparent 2px 13px);';
-            machBand.appendChild(machStripe);
-            wrap.appendChild(machBand);
-
-            const raw = document.createElement('div');
-            raw.style.cssText = 'position:absolute; top:' + RAW_TOP + 'px; height:' + (MACH_TOP - RAW_TOP) + 'px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 60%, #8b919b 100%);';
-            const scale = document.createElement('div');
-            scale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
-            raw.appendChild(scale);
-            const hatch = document.createElement('div');
-            hatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
-            raw.appendChild(hatch);
-            wrap.appendChild(raw);
-
-            [14, SW - 58].forEach(function(cx) {
-              const clampEl = document.createElement('div');
-              clampEl.style.cssText = 'position:absolute; left:' + cx + 'px; top:176px; width:44px; height:' + (STOCK_BOT - 176 + 4) + 'px; background:linear-gradient(180deg, #4a505a, #33383f); border-radius:4px 4px 0 0; box-shadow:inset 0 2px 0 rgba(255,255,255,0.18);';
-              const bolt = document.createElement('div');
-              bolt.style.cssText = 'position:absolute; left:50%; top:8px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #7d848f, #23272d 70%);';
-              clampEl.appendChild(bolt);
-              wrap.appendChild(clampEl);
-            });
-
-            return { wrap: wrap, machBand: machBand, raw: raw };
-          }
-
-          const stockA = buildStock();
-          const stockB = buildStock();
-          root.appendChild(stockA.wrap);
-          root.appendChild(stockB.wrap);
-
-          function renderStock(s, left, machinedUpTo) {
-            if (left > W + 20 || left + SW < -20) { s.wrap.style.display = 'none'; return; }
-            s.wrap.style.display = 'block';
-            s.wrap.style.left = left + 'px';
-            const rawStartRel = clamp(machinedUpTo - left, 0, SW);
-            const machined = rawStartRel > 2;
-            s.machBand.style.width = rawStartRel + 'px';
-            s.machBand.style.display = machined ? 'block' : 'none';
-            if (rawStartRel < SW - 1) {
-              s.raw.style.display = 'block';
-              s.raw.style.left = rawStartRel + 'px';
-              s.raw.style.width = (SW - rawStartRel) + 'px';
-              s.raw.style.borderRadius = machined ? '9px 0 0 0' : '0';
-              s.raw.style.boxShadow = machined ? 'inset 3px 0 0 rgba(255,255,255,0.5)' : 'none';
-            } else {
-              s.raw.style.display = 'none';
-            }
-          }
+          const travel = document.createElement('div');
+          travel.className = 'twc-endmill-travel';
+          root.appendChild(travel);
 
           const shadow = document.createElement('div');
-          shadow.style.cssText = 'position:absolute; width:88px; height:10px; border-radius:50%; background:rgba(0,0,0,0.28); filter:blur(4px); pointer-events:none;';
-          root.appendChild(shadow);
-
-          const glint = document.createElement('div');
-          glint.style.cssText = 'position:absolute; width:56px; height:40px; background:radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(215,230,255,0.4) 55%, transparent); filter:blur(1px); pointer-events:none;';
-          root.appendChild(glint);
-
-          const chipPool = document.createElement('div');
-          chipPool.style.cssText = 'position:absolute; inset:0; pointer-events:none;';
-          root.appendChild(chipPool);
-          const chipEls = [];
-          for (let i = 0; i < N_CHIPS; i++) {
-            const c = document.createElement('div');
-            c.style.cssText = 'position:absolute; border-radius:70% 30% 60% 40%; box-shadow:0 0 2px rgba(255,255,255,0.3); display:none;';
-            chipPool.appendChild(c);
-            chipEls.push(c);
-          }
+          shadow.style.cssText = 'position:absolute; left:-44px; top:105px; width:88px; height:10px; border-radius:50%; background:rgba(0,0,0,0.28); filter:blur(4px);';
+          travel.appendChild(shadow);
 
           const endmill = document.createElement('div');
-          endmill.style.cssText = 'position:absolute; width:104px; pointer-events:none;';
-          const totalH = 64 + 26 + 18 + 74;
-          endmill.style.height = totalH + 'px';
-          root.appendChild(endmill);
+          endmill.style.cssText = 'position:absolute; left:-52px; top:0; width:104px; height:182px;';
+          travel.appendChild(endmill);
 
           const housing = document.createElement('div');
           housing.style.cssText = 'position:absolute; left:0; top:0; width:104px; height:64px; background:linear-gradient(90deg, #23262c, #3c4149 30%, #4a505a 50%, #383d45 72%, #1f2228); border-radius:0 0 12px 12px; box-shadow:0 4px 10px rgba(0,0,0,0.35);';
-          const housingLine = document.createElement('div');
-          housingLine.style.cssText = 'position:absolute; left:10px; right:10px; top:40px; height:2px; background:rgba(0,0,0,0.4);';
-          housing.appendChild(housingLine);
           const led = document.createElement('div');
-          led.style.cssText = 'position:absolute; right:14px; top:48px; width:7px; height:7px; border-radius:50%;';
+          led.className = 'twc-endmill-led';
+          led.style.cssText = 'position:absolute; right:14px; top:48px; width:7px; height:7px; border-radius:50%; background:#ffc266;';
           housing.appendChild(led);
           endmill.appendChild(housing);
 
           const collet = document.createElement('div');
           collet.style.cssText = 'position:absolute; left:15px; top:64px; width:74px; height:26px; clip-path:polygon(0 0, 100% 0, 84% 100%, 16% 100%); background:linear-gradient(90deg, #565c66, #9aa1ab 32%, #c3c9d1 50%, #8d949e 70%, #494f58);';
-          const colletLine = document.createElement('div');
-          colletLine.style.cssText = 'position:absolute; left:0; right:0; top:12px; height:2px; background:rgba(0,0,0,0.3);';
-          collet.appendChild(colletLine);
           endmill.appendChild(collet);
 
           const shank = document.createElement('div');
@@ -1309,7 +1243,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const flutes = document.createElement('div');
           flutes.style.cssText = 'position:absolute; left:22px; top:108px; width:60px; height:74px; border-radius:0 0 7px 7px; overflow:hidden;';
           const fluteStripe = document.createElement('div');
-          fluteStripe.style.cssText = 'position:absolute; inset:0; background:repeating-linear-gradient(64deg, #1c1f24 0px 7px, #8d95a1 7px 10px, #e9eef4 10px 14px);';
+          fluteStripe.className = 'twc-endmill-flutes';
+          fluteStripe.style.cssText = 'position:absolute; top:0; left:-168px; width:420px; height:100%; background:repeating-linear-gradient(64deg, #1c1f24 0px 7px, #8d95a1 7px 10px, #e9eef4 10px 14px);';
           flutes.appendChild(fluteStripe);
           const fluteShade = document.createElement('div');
           fluteShade.style.cssText = 'position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.05) 26%, rgba(255,255,255,0.4) 46%, rgba(255,255,255,0.05) 62%, rgba(0,0,0,0.55));';
@@ -1317,108 +1252,32 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           endmill.appendChild(flutes);
 
           const tip = document.createElement('div');
-          tip.style.cssText = 'position:absolute; left:22px; width:60px; height:9px; border-radius:50%; background:linear-gradient(90deg, #2a2e34, #6c737d 50%, #262a30);';
-          tip.style.top = (totalH - 5) + 'px';
+          tip.style.cssText = 'position:absolute; left:22px; top:177px; width:60px; height:9px; border-radius:50%; background:linear-gradient(90deg, #2a2e34, #6c737d 50%, #262a30);';
           endmill.appendChild(tip);
 
-          function renderChips(t) {
-            for (let i = 0; i < N_CHIPS; i++) {
-              const el = chipEls[i];
-              const r1 = rnd(i * 5 + 1), r2 = rnd(i * 5 + 2), r3 = rnd(i * 5 + 3), r4 = rnd(i * 5 + 4), r5 = rnd(i * 5 + 5);
-              const P = 0.5 + r1 * 0.5;
-              const age = mod(t - r2 * 10, P);
-              const spawn = t - age;
-              if (spawn < FEED_START + 0.05 || spawn > FEED_END - 0.03) { el.style.display = 'none'; continue; }
-              const sx = cutterXAt(spawn);
-              if (sx < STOCK_L + 24 || sx > STOCK_R - 8) { el.style.display = 'none'; continue; }
-              const back = r3 < 0.72;
-              const vx = back ? -(150 + r4 * 320) : (80 + r4 * 190);
-              const vy = -(190 + r5 * 320);
-              const x = sx - 16 + vx * age;
-              const y = RAW_TOP + 4 + vy * age + 0.5 * 980 * age * age;
-              if (y > H + 24 || x < -24) { el.style.display = 'none'; continue; }
-              const life = age / P;
-              const o = life < 0.12 ? life / 0.12 : (life > 0.68 ? 1 - (life - 0.68) / 0.32 : 1);
-              const sSize = 5 + r4 * 8;
-              const rot = r5 * 360 + age * (back ? -1 : 1) * 1000;
-              el.style.display = 'block';
-              el.style.left = x + 'px';
-              el.style.top = y + 'px';
-              el.style.width = sSize + 'px';
-              el.style.height = (sSize * 0.7) + 'px';
-              el.style.background = 'linear-gradient(135deg, ' + pal.chipHi + ', ' + pal.chipLo + ' 60%, #c6ccd5)';
-              el.style.opacity = o;
-              el.style.transform = 'rotate(' + rot + 'deg)';
-            }
+          const glint = document.createElement('div');
+          glint.style.cssText = 'position:absolute; left:-44px; top:-25px; width:56px; height:40px; background:radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(215,230,255,0.4) 55%, transparent); filter:blur(1px); opacity:0.75;';
+          travel.appendChild(glint);
+
+          const chipWrap = document.createElement('div');
+          chipWrap.className = 'twc-chip-wrap';
+          chipWrap.style.cssText = 'position:absolute; left:0; top:120px; width:1px; height:1px;';
+          travel.appendChild(chipWrap);
+
+          const CHIP_COUNT = 14;
+          for (let i = 0; i < CHIP_COUNT; i++) {
+            const angle = (i / CHIP_COUNT) * Math.PI * 1.3 - 0.55;
+            const dist = 55 + (i % 4) * 16;
+            const tx = Math.round(Math.cos(angle) * dist);
+            const ty = Math.round(-Math.abs(Math.sin(angle) * dist) - 12 - (i % 3) * 10);
+            const tr = (i % 2 === 0 ? 1 : -1) * (220 + i * 17);
+            const size = 5 + (i % 4) * 2;
+            const chip = document.createElement('div');
+            chip.className = 'twc-chip';
+            chip.style.cssText = 'position:absolute; left:0; top:0; width:' + size + 'px; height:' + Math.round(size * 0.7) + 'px; border-radius:70% 30% 60% 40%; background:linear-gradient(135deg, #f2f5f9, #98a0ac 60%, #c6ccd5); box-shadow:0 0 2px rgba(255,255,255,0.3); --tx:' + tx + 'px; --ty:' + ty + 'px; --tr:' + tr + 'deg; animation-delay:' + (i * 0.09).toFixed(2) + 's;';
+            chipWrap.appendChild(chip);
           }
-
-          function render(t) {
-            const cx = cutterXAt(t);
-            const bottom = toolBottomAt(t);
-            const cutting = t > FEED_START - 0.02 && t < FEED_END && cx > STOCK_L + 18 && cx < STOCK_R;
-            const s = swapAt(t);
-            const shift = s * (SW + GAP);
-            const machinedUpTo = t < FEED_START ? -1e9 : (t > FEED_END ? 1e9 : cx + 8);
-
-            renderStock(stockA, STOCK_L - shift, machinedUpTo);
-            if (s > 0.001) {
-              renderStock(stockB, STOCK_L - shift + SW + GAP, -1e9);
-            } else {
-              stockB.wrap.style.display = 'none';
-            }
-
-            if (cx > STOCK_L - 40 && cx < STOCK_R + 40) {
-              shadow.style.display = 'block';
-              shadow.style.left = (cx - 44) + 'px';
-              shadow.style.top = (bottom - 3) + 'px';
-            } else {
-              shadow.style.display = 'none';
-            }
-
-            renderChips(t);
-
-            const glintO = cutting ? 0.55 + 0.45 * Math.sin(t * 43) : 0;
-            if (cutting) {
-              glint.style.display = 'block';
-              glint.style.left = (cx - 44) + 'px';
-              glint.style.top = (RAW_TOP - 14) + 'px';
-              glint.style.opacity = glintO;
-            } else {
-              glint.style.display = 'none';
-            }
-
-            const jx = cutting ? Math.sin(t * 151) * 0.7 : 0;
-            const jy = cutting ? Math.sin(t * 137 + 2) * 0.9 : 0;
-            endmill.style.left = (cx - 52 + jx) + 'px';
-            endmill.style.top = (bottom - totalH + jy) + 'px';
-
-            const spin = -mod(t * 2400, 168);
-            fluteStripe.style.backgroundPosition = spin + 'px 0';
-
-            const ledColor = cutting ? '#ffc266' : '#7ee08a';
-            const ledPulse = 0.65 + 0.35 * Math.sin(t * 10);
-            led.style.background = ledColor;
-            led.style.opacity = ledPulse;
-            led.style.boxShadow = '0 0 6px ' + ledColor;
-          }
-
-          let rafId = null;
-          let startTs = null;
-          function frame(ts) {
-            if (startTs === null) startTs = ts;
-            const elapsed = ((ts - startTs) / 1000) * speed;
-            const t = mod(elapsed, CYCLE);
-            render(t);
-            rafId = requestAnimationFrame(frame);
-          }
-          rafId = requestAnimationFrame(frame);
-
-          return function stop() {
-            if (rafId) cancelAnimationFrame(rafId);
-          };
         }
-
-        let twcStopEndmillAnim = null;
 
         function twcShowProcessingModal(title, paragraphs) {
           const modalOverlay = document.getElementById('twcModalOverlay');
@@ -1435,14 +1294,17 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           animOuter.appendChild(animInner);
           body.appendChild(animOuter);
 
-          if (twcStopEndmillAnim) { twcStopEndmillAnim(); twcStopEndmillAnim = null; }
-          twcStopEndmillAnim = twcInitEndmillAnim(animInner, { speed: 1 });
+          twcBuildEndmillAnim(animInner);
 
-          // Scale is applied AFTER init, not before - twcInitEndmillAnim
-          // sets root.style.cssText itself as its first action, which
-          // would otherwise silently wipe out any transform set here
-          // beforehand (a real bug caught by inspecting the actual
-          // resulting cssText, not just checking for thrown errors).
+          // Scale is applied AFTER twcBuildEndmillAnim, not before - that
+          // function sets root.style.cssText itself as its first action,
+          // which silently wipes out any transform set here beforehand.
+          // This exact bug was already fixed once in the earlier
+          // JS-driven version and was accidentally reintroduced when the
+          // animation was rewritten as pure CSS, since the "set cssText
+          // then build" ordering got copy-pasted back in - confirmed via
+          // live verification (animation rendering at full 1920px size,
+          // clipped by the modal instead of scaled to fit).
           const animScale = 860 / 1920;
           animInner.style.transformOrigin = 'top left';
           animInner.style.transform = 'scale(' + animScale + ')';
@@ -1462,7 +1324,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         function twcHideModal() {
           const modalOverlay = document.getElementById('twcModalOverlay');
           const modalCard = document.getElementById('twcModalCard');
-          if (twcStopEndmillAnim) { twcStopEndmillAnim(); twcStopEndmillAnim = null; }
           document.getElementById('twcModalActions').style.display = '';
           document.getElementById('twcModalBody').className = 'twc-modal-body';
           modalCard.classList.remove('twc-modal--wide');
@@ -3487,6 +3348,19 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             await twcAlert('Failed to bring this G-code to life: ' + (err && err.message ? err.message : err));
           }
         });
+
+        // Native target="_blank" anchor navigation was reportedly opening
+        // a blank window inside the embedded dialog instead of handing
+        // off to the OS's actual default browser - calling window.open()
+        // explicitly from a click handler is a more reliable way to
+        // trigger that hand-off in an embedded webview like this one.
+        const releaseLink = document.getElementById('swReleaseLink');
+        if (releaseLink) {
+          releaseLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.open(releaseLink.href, '_blank', 'noopener,noreferrer');
+          });
+        }
 
         // === Init ===
         renderTable();
