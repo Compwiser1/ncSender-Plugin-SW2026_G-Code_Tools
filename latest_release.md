@@ -1,3 +1,7 @@
+## v1.22.6 (EXPERIMENTAL — clear of material at both ends of the pass)
+
+**The left/down starting position now sits clearly clear of the aluminum**, and the tool now travels fully **past** the aluminum's right edge before lifting up, instead of starting/stopping right at the material's edges. Verified the numbers line up correctly: chip visibility (already timed to roughly match when the tool is actually over the stock) needed no changes, since the moment the tool reaches the stock's left edge (110px) and the moment it clears the right edge (1810px) both landed almost exactly on the existing chip-visibility window (114px and 1813px respectively) once the new travel range was worked out.
+
 ## v1.22.5 (EXPERIMENTAL — removed the black line, rebuilt the motion as a clean 5-step loop)
 
 **Removed the dark line along the bottom of the aluminum block** - it was the machine-table bar plus the block's own drop-shadow, both of which used to blend into the animation's own dark background before that background was removed for transparency, and stood out sharply against it afterward.

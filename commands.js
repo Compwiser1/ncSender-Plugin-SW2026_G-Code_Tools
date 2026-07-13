@@ -804,11 +804,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         animation: twc-endmill-travel 8s linear infinite;
       }
       @keyframes twc-endmill-travel {
-        0%   { transform: translate(100px, -44px); }
-        45%  { transform: translate(1800px, -44px); }
-        55%  { transform: translate(1800px, -95px); }
-        90%  { transform: translate(100px, -95px); }
-        100% { transform: translate(100px, -44px); }
+        0%   { transform: translate(-60px, -44px); }
+        45%  { transform: translate(1900px, -44px); }
+        55%  { transform: translate(1900px, -95px); }
+        90%  { transform: translate(-60px, -95px); }
+        100% { transform: translate(-60px, -44px); }
       }
 
       .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
