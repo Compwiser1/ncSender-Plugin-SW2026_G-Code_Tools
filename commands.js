@@ -804,13 +804,11 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         animation: twc-endmill-travel 8s linear infinite;
       }
       @keyframes twc-endmill-travel {
-        0%   { transform: translate(-90px, -37px); }
-        7%   { transform: translate(100px, -37px); }
-        75%  { transform: translate(1830px, -37px); }
-        82%  { transform: translate(1830px, -86px); }
-        95%  { transform: translate(-60px, -86px); }
-        99%  { transform: translate(-90px, -37px); }
-        100% { transform: translate(-90px, -37px); }
+        0%   { transform: translate(100px, -44px); }
+        45%  { transform: translate(1800px, -44px); }
+        55%  { transform: translate(1800px, -95px); }
+        90%  { transform: translate(100px, -95px); }
+        100% { transform: translate(100px, -44px); }
       }
 
       .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
@@ -821,9 +819,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       .twc-chip-wrap { animation: twc-chip-visibility 8s linear infinite; }
       @keyframes twc-chip-visibility {
-        0%, 5%   { opacity: 0; }
-        8%, 73%  { opacity: 1; }
-        77%, 100% { opacity: 0; }
+        0%, 2%    { opacity: 0; }
+        4%, 43%   { opacity: 1; }
+        46%, 100% { opacity: 0; }
       }
       .twc-chip {
         animation: twc-chip-fly 0.85s cubic-bezier(.25,.6,.35,1) infinite;
@@ -1193,12 +1191,8 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         function twcBuildEndmillAnim(root) {
           root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:transparent;';
 
-          const table = document.createElement('div');
-          table.style.cssText = 'position:absolute; left:0; right:0; top:206px; height:14px; background:linear-gradient(180deg, #0e1015, #090a0d); box-shadow:0 -1px 0 rgba(255,255,255,0.07);';
-          root.appendChild(table);
-
           const stock = document.createElement('div');
-          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%); box-shadow:0 6px 18px rgba(0,0,0,0.45);';
+          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%);';
           const stockScale = document.createElement('div');
           stockScale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
           stock.appendChild(stockScale);

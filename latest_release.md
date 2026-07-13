@@ -1,3 +1,9 @@
+## v1.22.5 (EXPERIMENTAL — removed the black line, rebuilt the motion as a clean 5-step loop)
+
+**Removed the dark line along the bottom of the aluminum block** - it was the machine-table bar plus the block's own drop-shadow, both of which used to blend into the animation's own dark background before that background was removed for transparency, and stood out sharply against it afterward.
+
+**Rebuilt the motion as the exact sequence requested**, replacing the previous feed/retract/rapid-return timing: start at the left already down (slightly below the top of the aluminum), move right while staying down (cutting), go straight up clear of the material at the right, traverse back to the left while staying up, then plunge back down at the left to loop seamlessly. Chips now only appear during the "moving right while down" portion of the cycle, matching when the tool is actually engaged with the material.
+
 ## v1.22.4 (EXPERIMENTAL — transparent animation background; external link is likely a host-level limitation)
 
 **Removed the animation strip's own dark background gradient**, so it blends transparently into the modal's own surface color instead of showing as a distinct darker rectangle.
