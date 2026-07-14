@@ -826,14 +826,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .twc-endmill-led { animation: twc-led-pulse 0.6s ease-in-out infinite; }
       @keyframes twc-led-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
-      .twc-endmill-rotation-glint { animation: twc-rotation-glint 0.9s ease-in-out infinite; }
-      @keyframes twc-rotation-glint {
-        0%          { transform: translateX(0); opacity: 0; }
-        15%         { opacity: 0.9; }
-        50%         { transform: translateX(124px); opacity: 0.9; }
-        65%, 100%   { transform: translateX(124px); opacity: 0; }
-      }
-
       .twc-chip-wrap { animation: twc-chip-visibility 10s linear infinite; }
       @keyframes twc-chip-visibility {
         0%, 1.6%      { opacity: 0; }
@@ -1278,9 +1270,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const stock = document.createElement('div');
           stock.className = 'twc-endmill-block';
           stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%);';
-          const stockScale = document.createElement('div');
-          stockScale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
-          stock.appendChild(stockScale);
           const stockHatch = document.createElement('div');
           stockHatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
           stock.appendChild(stockHatch);
@@ -1354,15 +1343,6 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           const tip = document.createElement('div');
           tip.style.cssText = 'position:absolute; left:22px; top:177px; width:60px; height:9px; border-radius:50%; background:linear-gradient(90deg, #2a2e34, #6c737d 50%, #262a30);';
           endmill.appendChild(tip);
-
-          // A light glint sweeping down across the whole tool, on top of
-          // the flute-stripe slide - reinforces the "it's spinning"
-          // read the way a reflection catching a rotating cylinder would,
-          // rather than relying solely on the barber-pole flute effect.
-          const rotationGlint = document.createElement('div');
-          rotationGlint.className = 'twc-endmill-rotation-glint';
-          rotationGlint.style.cssText = 'position:absolute; top:0; left:-20px; width:20px; height:100%; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);';
-          endmill.appendChild(rotationGlint);
 
           const glint = document.createElement('div');
           glint.style.cssText = 'position:absolute; left:-44px; top:-25px; width:56px; height:40px; background:radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(215,230,255,0.4) 55%, transparent); filter:blur(1px); opacity:0.75;';

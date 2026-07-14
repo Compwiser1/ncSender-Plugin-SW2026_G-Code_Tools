@@ -1,3 +1,9 @@
+## v1.24.2 (EXPERIMENTAL — removed a border-like highlight strip and the sweeping rotation glint)
+
+**Removed the block's top highlight strip** (a thin gradient bar that was reading as a border around the aluminum block) - the block itself never had an actual CSS `border` property, so this was the most likely candidate for what looked like one.
+
+**Removed the sweeping light glint** added in v1.23.6 - the flute-stripe slide alone still simulates the tool's rotation. Note: there are two separate "glint" elements in this animation - this removes the one that swept across the whole tool; the smaller radial spark/shine near the cutting point (present since much earlier) is untouched. If that one should also go, or if the border is still visible somewhere else, let me know what it looks like and I'll track it down.
+
 ## v1.24.1 (EXPERIMENTAL — reverted the v1.24.0 version-requirement change, it broke the plugin)
 
 **Reverted the ncSender 2.0.62+/Pro-removal changes from v1.24.0** - confirmed to break the plugin, reason not yet diagnosed from here. `manifest.json`'s `minAppVersion` and `platforms` key (`pro-v2`), the README's Compatibility section, and both in-code error messages are all back to their original ncSender 2.0.37+ (OSS) / 2.0.88+ (Pro) wording exactly as they were before v1.24.0. The other two v1.24.0 changes (larger "Processing..." caption, 5-pass zigzag animation) are untouched and remain in place, since only the version-requirement change was reported as broken.
