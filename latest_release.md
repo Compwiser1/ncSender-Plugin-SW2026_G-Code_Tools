@@ -1,3 +1,7 @@
+## v1.23.4 (EXPERIMENTAL — longer pause before stepper auto-repeat kicks in)
+
+**Increased the delay before holding a stepper arrow starts auto-repeating, from 0.4s to a full 1 second** - a quick tap still steps once immediately as before, but repeating no longer kicks in almost right away. Verified directly: at 500ms into a hold, the value is still just the single initial step; repeating only begins once the full 1-second mark passes.
+
 ## v1.23.3 (EXPERIMENTAL — stepper hold-to-repeat slowed by half)
 
 **Holding a stepper arrow now repeats at half the previous rate** (140ms between steps instead of 70ms) - verified directly: the same hold duration that previously produced about 4 repeat steps now produces about 2. The initial press-to-first-repeat delay (400ms) is unchanged.

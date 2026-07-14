@@ -2114,7 +2114,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // happens here (mousedown/touchstart), not in a 'click' handler,
         // so a held press doesn't also fire an extra step when the
         // browser's own click event follows the eventual mouseup.
-        const TWC_STEP_REPEAT_DELAY_MS = 400;
+        const TWC_STEP_REPEAT_DELAY_MS = 1000;
         const TWC_STEP_REPEAT_INTERVAL_MS = 140;
         let twcStepTimeout = null;
         let twcStepInterval = null;
