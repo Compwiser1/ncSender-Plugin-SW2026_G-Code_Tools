@@ -1264,12 +1264,57 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // per-frame JS computation - the core identity (endmill
         // traveling, spinning flutes, LED, a continuous stream of
         // tumbling chips, a "processing" caption) is preserved.
-        function twcBuildEndmillAnim(root) {
+        // Cycles through materials across separate uses of this dialog
+        // (not within one wait, since the animation is pure CSS with no
+        // per-frame JS - material selection happens once here, at build
+        // time, before the blocking computation starts). Persisted via
+        // localStorage since this whole script re-evaluates fresh every
+        // time the dialog opens, so a plain JS variable wouldn't survive
+        // between separate openings.
+        const TWC_MATERIALS = [
+          {
+            name: 'ALUMINUM',
+            bg: 'linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%)',
+            chipHi: '#f2f5f9', chipMid: '#98a0ac', chipLo: '#c6ccd5',
+            textColor: 'rgba(40,44,50,0.55)'
+          },
+          {
+            name: 'WOOD',
+            bg: 'linear-gradient(180deg, #c9a06e 0%, #b8875a 25%, #a6764a 55%, #8f6239 85%, #7a5330 100%)',
+            chipHi: '#e8c088', chipMid: '#c08850', chipLo: '#a06838',
+            textColor: 'rgba(60,35,10,0.5)'
+          },
+          {
+            name: 'PLASTIC',
+            bg: 'linear-gradient(180deg, #4a5fc7 0%, #3f51b5 25%, #34459c 55%, #2a3785 85%, #212c6d 100%)',
+            chipHi: '#8fa0ee', chipMid: '#5a6fd4', chipLo: '#3f51b5',
+            textColor: 'rgba(255,255,255,0.4)'
+          }
+        ];
+
+        function twcPickMaterial() {
+          let idx = 0;
+          try {
+            idx = parseInt(localStorage.getItem('sw2026-material-cycle-index'), 10);
+            if (isNaN(idx) || idx < 0) idx = 0;
+          } catch (e) { idx = 0; }
+          const material = TWC_MATERIALS[idx % TWC_MATERIALS.length];
+          try {
+            localStorage.setItem('sw2026-material-cycle-index', String((idx + 1) % TWC_MATERIALS.length));
+          } catch (e) { /* ignore */ }
+          return material;
+        }
+
+        function twcBuildEndmillAnim(root, material) {
           root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:transparent;';
 
           const stock = document.createElement('div');
           stock.className = 'twc-endmill-block';
-          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%); will-change:transform;';
+          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:' + material.bg + '; will-change:transform;';
+          const materialLabel = document.createElement('div');
+          materialLabel.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-weight:700; font-size:34px; letter-spacing:0.12em; color:' + material.textColor + '; user-select:none;';
+          materialLabel.textContent = material.name;
+          stock.appendChild(materialLabel);
           // Five progressively-deeper passes, zigzagging left-right-left
           // etc. Each band spans the tool's FULL 1780px travel range
           // (110-40 to 1810+40, not just the block's own 1700px), clipped
@@ -1360,7 +1405,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
             const size = 5 + (i % 4) * 2;
             const chip = document.createElement('div');
             chip.className = 'twc-chip';
-            chip.style.cssText = 'position:absolute; left:0; top:0; width:' + size + 'px; height:' + Math.round(size * 0.7) + 'px; border-radius:70% 30% 60% 40%; background:linear-gradient(135deg, #f2f5f9, #98a0ac 60%, #c6ccd5); box-shadow:0 0 2px rgba(255,255,255,0.3); --tx:' + tx + 'px; --ty:' + ty + 'px; --tr:' + tr + 'deg; animation-delay:' + (i * 0.09).toFixed(2) + 's;';
+            chip.style.cssText = 'position:absolute; left:0; top:0; width:' + size + 'px; height:' + Math.round(size * 0.7) + 'px; border-radius:70% 30% 60% 40%; background:linear-gradient(135deg, ' + material.chipHi + ', ' + material.chipMid + ' 60%, ' + material.chipLo + '); box-shadow:0 0 2px rgba(255,255,255,0.3); --tx:' + tx + 'px; --ty:' + ty + 'px; --tr:' + tr + 'deg; animation-delay:' + (i * 0.09).toFixed(2) + 's;';
             chipWrap.appendChild(chip);
           }
         }
@@ -1380,28 +1425,21 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           animOuter.appendChild(animInner);
           body.appendChild(animOuter);
 
-          twcBuildEndmillAnim(animInner);
+          twcBuildEndmillAnim(animInner, twcPickMaterial());
 
-          // Scale is applied AFTER twcBuildEndmillAnim, not before - that
-          // function sets root.style.cssText itself as its first action,
-          // which silently wipes out any transform set here beforehand.
-          // This exact bug was already fixed once in the earlier
-          // JS-driven version and was accidentally reintroduced when the
-          // animation was rewritten as pure CSS, since the "set cssText
-          // then build" ordering got copy-pasted back in - confirmed via
-          // live verification (animation rendering at full 1920px size,
-          // clipped by the modal instead of scaled to fit).
+          // Switched from transform:scale() to CSS zoom - a genuinely
+          // different scaling mechanism (it resizes the actual layout
+          // box rather than visually transforming a full-size box and
+          // then clipping it), which avoids the specific rendering path
+          // that was the leading suspect for the reported border/seam.
+          // zoom is non-standard but reliably supported in Chromium,
+          // which this embedded dialog runs on (confirmed earlier via
+          // its Electron-style window behavior). Unlike transform:scale,
+          // zoom naturally affects layout size, so animOuter's height
+          // adjusts correctly on its own - no marginBottom compensation
+          // hack needed.
           const animScale = 860 / 1920;
-          animInner.style.transformOrigin = 'top left';
-          // translateZ(0) forces this onto its own GPU-composited layer -
-          // a standard fix for a known rendering quirk where a scaled
-          // element with overflow:hidden children can show a thin
-          // anti-aliased seam at the clip boundary, matching exactly
-          // what was reported (a same-color line tracking the block's
-          // own edge).
-          animInner.style.transform = 'scale(' + animScale + ') translateZ(0)';
-          animInner.style.backfaceVisibility = 'hidden';
-          animInner.style.marginBottom = (220 * animScale - 220) + 'px';
+          animInner.style.zoom = String(animScale);
 
           paragraphs.forEach(function(para) {
             const p = document.createElement('p');
