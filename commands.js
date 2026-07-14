@@ -460,21 +460,23 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         box-sizing: border-box;
       }
 
-      .sw-compat-notice {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        background: rgba(249,115,22,0.1);
+      .sw-compat-row {
+        display: flex; justify-content: flex-end;
+        margin-bottom: 8px;
+      }
+      .sw-compat-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: rgba(249,115,22,0.12);
         border: 1px solid #f97316;
-        border-radius: 6px;
-        padding: 8px 12px;
-        margin-bottom: 12px;
-        font-size: 0.82rem;
-        line-height: 1.4;
-        color: var(--color-text-primary, #e0e0e0);
+        border-radius: 999px;
+        padding: 3px 11px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #f97316;
+        text-decoration: none;
+        white-space: nowrap;
       }
-      .sw-compat-notice a {
-        color: #f97316; font-weight: 600; text-decoration: none; white-space: nowrap;
-      }
-      .sw-compat-notice a:hover { text-decoration: underline; }
+      .sw-compat-badge:hover { background: rgba(249,115,22,0.22); text-decoration: underline; }
 
       .sw-section {
         border: 1px solid var(--color-border, #3a3f45);
@@ -893,10 +895,12 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
     </style>
 
     <div class="sw-container">
-      <div class="sw-compat-notice">
-        <span aria-hidden="true">&#9888;&#65039;</span>
-        <span>This plugin only works with G-code from the SW2026 FrankenOKO post processor.</span>
-        <a href="https://github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools/releases/latest" id="swReleaseLink" rel="noopener">Get the latest post processor &amp; plugin release &#8599;</a>
+      <div class="sw-compat-row">
+        <a href="https://github.com/Compwiser1/ncSender-Plugin-SW2026_G-Code_Tools/releases/latest" id="swReleaseLink" class="sw-compat-badge" rel="noopener" title="This plugin only works with G-code from the SW2026 FrankenOKO post processor. Click to get the latest post processor and plugin release.">
+          <span aria-hidden="true">&#9888;&#65039;</span>
+          <span>SW2026 Post Processor Required</span>
+          <span aria-hidden="true">&#8599;</span>
+        </a>
       </div>
       <div class="sw-section" id="toolSection">
         <div class="sw-section-header" id="toolSectionHeader">

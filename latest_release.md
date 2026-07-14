@@ -1,3 +1,7 @@
+## v1.23.2 (EXPERIMENTAL — compatibility notice shrunk to a corner badge)
+
+**The post-processor compatibility notice was taking up too much vertical space as a full-width banner** - replaced with a small, compact pill badge right-aligned in its own slim row above Tool Manager, instead of a tall box with wrapped explanatory text. The full explanation is still there, just moved to a hover tooltip instead of permanently occupying space. Same link, same click-to-open behavior (kept the same element id, so the existing click handler needed no changes).
+
 ## v1.23.1 (EXPERIMENTAL — press and hold a stepper arrow to repeat quickly)
 
 **Press and hold either stepper arrow (Z Offset or X & Y Offset) to repeat quickly**, instead of needing one click per 0.01 step - steps immediately on press, then after a short delay repeats at a fast fixed rate until released. A quick click still only steps once, verified directly: a press-and-release within the initial delay window produces exactly one step, while a held press produces several. Restructured so all the actual stepping now happens on press (not on the browser's `click` event, which fires after release) - a held press firing a `click` afterward doesn't produce an extra, unwanted step on top of the repeats. Keyboard activation (Enter/Space) was updated to call the same step logic directly, since it previously relied on triggering that now-removed `click` handling.
