@@ -1,3 +1,7 @@
+## v1.23.3 (EXPERIMENTAL — stepper hold-to-repeat slowed by half)
+
+**Holding a stepper arrow now repeats at half the previous rate** (140ms between steps instead of 70ms) - verified directly: the same hold duration that previously produced about 4 repeat steps now produces about 2. The initial press-to-first-repeat delay (400ms) is unchanged.
+
 ## v1.23.2 (EXPERIMENTAL — compatibility notice shrunk to a corner badge)
 
 **The post-processor compatibility notice was taking up too much vertical space as a full-width banner** - replaced with a small, compact pill badge right-aligned in its own slim row above Tool Manager, instead of a tall box with wrapped explanatory text. The full explanation is still there, just moved to a hover tooltip instead of permanently occupying space. Same link, same click-to-open behavior (kept the same element id, so the existing click handler needed no changes).
