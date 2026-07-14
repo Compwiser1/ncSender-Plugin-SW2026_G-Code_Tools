@@ -1269,7 +1269,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
           const stock = document.createElement('div');
           stock.className = 'twc-endmill-block';
-          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%);';
+          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%); will-change:transform;';
           // Five progressively-deeper passes, zigzagging left-right-left
           // etc. Each band spans the tool's FULL 1780px travel range
           // (110-40 to 1810+40, not just the block's own 1700px), clipped
@@ -1393,7 +1393,14 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           // clipped by the modal instead of scaled to fit).
           const animScale = 860 / 1920;
           animInner.style.transformOrigin = 'top left';
-          animInner.style.transform = 'scale(' + animScale + ')';
+          // translateZ(0) forces this onto its own GPU-composited layer -
+          // a standard fix for a known rendering quirk where a scaled
+          // element with overflow:hidden children can show a thin
+          // anti-aliased seam at the clip boundary, matching exactly
+          // what was reported (a same-color line tracking the block's
+          // own edge).
+          animInner.style.transform = 'scale(' + animScale + ') translateZ(0)';
+          animInner.style.backfaceVisibility = 'hidden';
           animInner.style.marginBottom = (220 * animScale - 220) + 'px';
 
           paragraphs.forEach(function(para) {

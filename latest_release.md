@@ -1,3 +1,11 @@
+## v1.24.4 (EXPERIMENTAL — new diagnosis for the border: forced GPU layer promotion)
+
+**Re-diagnosed the "border" based on a more precise description** (wraps nearly the whole perimeter, same color as the block, fixed in place, unaffected by removing the hatch/highlight overlays) - this matches a known rendering artifact where a scaled element with `overflow:hidden` children can show a thin anti-aliased seam right at its own clip boundary, in the block's own color, especially when combined with a non-integer CSS scale factor (this animation is scaled to ~0.448x to fit the popup).
+
+**Fix**: force GPU layer promotion, the standard remedy for this exact class of seam. Added `translateZ(0)` and `backface-visibility: hidden` to the scaled wrapper, and `will-change: transform` to the block itself (not `translateZ` directly there, since the block already has its own CSS animation on `transform` for the rise-from-below reset, and a plain inline transform would just get overridden by that animation - `will-change` avoids that conflict while still requesting its own composited layer).
+
+Flagging honestly: this is a well-established fix for the symptom pattern described, but couldn't be visually confirmed from here. If it's still there after this, the most likely remaining explanation is something specific to how ncSender's own webview handles scaled/clipped content, which may need a different approach entirely (e.g., building the animation at native size instead of scaling a larger canvas down).
+
 ## v1.24.3 (EXPERIMENTAL — stripped block down further, still chasing the border report)
 
 **Removed the block's hatching texture overlay** (a subtle repeating vertical-stripe pattern) on top of last version's removed highlight strip - the block is now a completely plain gradient fill with no decorative overlays at all. Honest note: I couldn't directly render the screenshot the user provided to compare against, so this is an incremental, defensive simplification rather than a confirmed fix for the specific line shown - if it's still there after this, the next step is narrowing down exactly which element it is (a zoomed crop of just that line, or its approximate color, would help pin it down precisely instead of continuing to guess).
