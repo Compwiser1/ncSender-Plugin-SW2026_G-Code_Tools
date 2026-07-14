@@ -889,13 +889,48 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       /* The now-fully-removed block snaps out of view right as the
          bands reset, then rises back up from below the visible canvas
          with fresh material already showing (bands already hidden by
-         the time it's back in view). */
+         the time it's back in view). Runs on each layer's own 10s
+         period, independent of which material layer is currently faded
+         in. */
       .twc-endmill-block { animation: twc-block-rise 10s linear infinite; }
       @keyframes twc-block-rise {
         0%, 96%      { transform: translateY(0); }
         96.01%       { transform: translateY(150px); }
         100%         { transform: translateY(0); }
       }
+
+      /* Material rotation: three block layers (and their matching chip
+         sets) stacked, each visible for exactly one of the three 10s
+         cutting cycles within a 30s master loop. The visible layer sits
+         on top (opacity 1) while the tool cuts through it; the other two
+         are hidden. Because the per-pass timing is a plain 10s loop, it
+         repeats three times per master cycle - once per material shown -
+         so each material gets a full, clean 5-pass machining pass. The
+         brief overlap at each handoff is hidden by the block-rise
+         snap-out happening at the same 96% point. */
+      .twc-mat-layer-1, .twc-mat-layer-2, .twc-mat-layer-3 { opacity: 0; }
+      .twc-mat-layer-1 { animation: twc-block-rise 10s linear infinite, twc-mat-fade-1 30s linear infinite; }
+      .twc-mat-layer-2 { animation: twc-block-rise 10s linear infinite, twc-mat-fade-2 30s linear infinite; }
+      .twc-mat-layer-3 { animation: twc-block-rise 10s linear infinite, twc-mat-fade-3 30s linear infinite; }
+      @keyframes twc-mat-fade-1 {
+        0%, 32%      { opacity: 1; }
+        33.4%, 100%  { opacity: 0; }
+      }
+      @keyframes twc-mat-fade-2 {
+        0%, 33.2%    { opacity: 0; }
+        33.4%, 65.3% { opacity: 1; }
+        66.7%, 100%  { opacity: 0; }
+      }
+      @keyframes twc-mat-fade-3 {
+        0%, 66.5%    { opacity: 0; }
+        66.7%, 98.6% { opacity: 1; }
+        100%         { opacity: 0; }
+      }
+      .twc-mat-chips-1 { animation: twc-mat-fade-1 30s linear infinite; }
+      .twc-mat-chips-2 { animation: twc-mat-fade-2 30s linear infinite; }
+      .twc-mat-chips-3 { animation: twc-mat-fade-3 30s linear infinite; opacity: 0; }
+      .twc-mat-chips-1 { opacity: 0; }
+      .twc-mat-chips-2 { opacity: 0; }
 
       .twc-chip {
         animation: twc-chip-fly 0.85s cubic-bezier(.25,.6,.35,1) infinite;
@@ -1264,13 +1299,16 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // per-frame JS computation - the core identity (endmill
         // traveling, spinning flutes, LED, a continuous stream of
         // tumbling chips, a "processing" caption) is preserved.
-        // Cycles through materials across separate uses of this dialog
-        // (not within one wait, since the animation is pure CSS with no
-        // per-frame JS - material selection happens once here, at build
-        // time, before the blocking computation starts). Persisted via
-        // localStorage since this whole script re-evaluates fresh every
-        // time the dialog opens, so a plain JS variable wouldn't survive
-        // between separate openings.
+        // All three materials, shown in rotation. Since the animation
+        // loops purely in CSS (no per-frame JS), the material can't be
+        // swapped by JS between loops - so instead all three block
+        // layers are built up front, stacked, and each is faded in
+        // during its own third of a tripled (30s) master cycle. That
+        // makes the material visibly change on every loop, driven
+        // entirely by CSS. (The earlier localStorage approach picked one
+        // material per dialog-open in JS, which meant a given opening
+        // was stuck on a single material for its whole life - usually
+        // just Aluminum, since openings are short.)
         const TWC_MATERIALS = [
           {
             name: 'ALUMINUM',
@@ -1292,51 +1330,48 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           }
         ];
 
-        function twcPickMaterial() {
-          let idx = 0;
-          try {
-            idx = parseInt(localStorage.getItem('sw2026-material-cycle-index'), 10);
-            if (isNaN(idx) || idx < 0) idx = 0;
-          } catch (e) { idx = 0; }
-          const material = TWC_MATERIALS[idx % TWC_MATERIALS.length];
-          try {
-            localStorage.setItem('sw2026-material-cycle-index', String((idx + 1) % TWC_MATERIALS.length));
-          } catch (e) { /* ignore */ }
-          return material;
-        }
-
-        function twcBuildEndmillAnim(root, material) {
+        function twcBuildEndmillAnim(root) {
           root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:transparent;';
 
-          const stock = document.createElement('div');
-          stock.className = 'twc-endmill-block';
-          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:' + material.bg + '; will-change:transform;';
-          const materialLabel = document.createElement('div');
-          materialLabel.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-weight:700; font-size:34px; letter-spacing:0.12em; color:' + material.textColor + '; user-select:none;';
-          materialLabel.textContent = material.name;
-          stock.appendChild(materialLabel);
-          // Five progressively-deeper passes, zigzagging left-right-left
-          // etc. Each band spans the tool's FULL 1780px travel range
-          // (110-40 to 1810+40, not just the block's own 1700px), clipped
-          // by the block's own overflow:hidden - this makes the reveal
-          // track the tool's actual position by construction (same
-          // linear function of time), rather than needing a separate,
-          // easy-to-get-subtly-wrong percentage calculation for exactly
-          // when the tool crosses the block's true edges. A small 1.5px
-          // vertical overlap between adjacent bands closes off any
-          // possible seam between rows.
-          const OVERTRAVEL = 40;
-          const BAND_H5 = 80 / 5;
-          const BAND_OVERLAP = 1.5;
-          for (let i = 0; i < 5; i++) {
-            const top = i * BAND_H5 - (i === 0 ? 0 : BAND_OVERLAP);
-            const bottom = (i + 1) * BAND_H5 + (i === 4 ? 0 : BAND_OVERLAP);
-            const band = document.createElement('div');
-            band.className = 'twc-remove-band twc-remove-band-' + (i + 1);
-            band.style.cssText = 'position:absolute; left:-' + OVERTRAVEL + 'px; top:' + top + 'px; width:' + (1700 + 2 * OVERTRAVEL) + 'px; height:' + (bottom - top) + 'px; background:var(--color-surface-muted, #1a1a1a); transform:scaleX(0);';
-            stock.appendChild(band);
-          }
-          root.appendChild(stock);
+          // One block layer per material, stacked. Each carries its own
+          // material name label and its own set of reveal bands. The
+          // twc-mat-layer-N class cross-fades it in for its third of the
+          // master cycle; the reveal bands inside all share the same
+          // per-pass timing (that timing runs 3x per master cycle, once
+          // per material shown).
+          TWC_MATERIALS.forEach(function(material, mi) {
+            const stock = document.createElement('div');
+            stock.className = 'twc-endmill-block twc-mat-layer-' + (mi + 1);
+            stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:' + material.bg + '; will-change:transform, opacity;';
+            const materialLabel = document.createElement('div');
+            materialLabel.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-weight:700; font-size:34px; letter-spacing:0.12em; color:' + material.textColor + '; user-select:none;';
+            materialLabel.textContent = material.name;
+            stock.appendChild(materialLabel);
+            // Five progressively-deeper passes, zigzagging left-right-
+            // left etc. Each band spans the tool's FULL 1780px travel
+            // range (110-40 to 1810+40, not just the block's own 1700px),
+            // clipped by the block's own overflow:hidden - this makes the
+            // reveal track the tool's actual position by construction
+            // (same linear function of time), rather than a separate,
+            // easy-to-get-subtly-wrong percentage calc for when the tool
+            // crosses the block's true edges. A small 1.5px vertical
+            // overlap between adjacent bands closes off any seam between
+            // rows, and the last band extends a few px past the block's
+            // bottom (clipped away) so no sub-pixel sliver survives at
+            // the very bottom edge.
+            const OVERTRAVEL = 40;
+            const BAND_H5 = 80 / 5;
+            const BAND_OVERLAP = 1.5;
+            for (let i = 0; i < 5; i++) {
+              const top = i * BAND_H5 - (i === 0 ? 0 : BAND_OVERLAP);
+              const bottom = (i + 1) * BAND_H5 + (i === 4 ? 6 : BAND_OVERLAP);
+              const band = document.createElement('div');
+              band.className = 'twc-remove-band twc-remove-band-' + (i + 1);
+              band.style.cssText = 'position:absolute; left:-' + OVERTRAVEL + 'px; top:' + top + 'px; width:' + (1700 + 2 * OVERTRAVEL) + 'px; height:' + (bottom - top) + 'px; background:var(--color-surface-muted, #1a1a1a); transform:scaleX(0);';
+              stock.appendChild(band);
+            }
+            root.appendChild(stock);
+          });
 
           const caption = document.createElement('div');
           caption.className = 'twc-endmill-caption';
@@ -1395,19 +1430,30 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           chipWrap.style.cssText = 'position:absolute; left:0; top:120px; width:1px; height:1px;';
           travel.appendChild(chipWrap);
 
+          // One set of chips per material, each fading in with its
+          // matching block layer (twc-mat-chips-N) so the chips always
+          // match the material currently being shown. Within a set, the
+          // per-chip fly animation and the shared chip-visibility gating
+          // (only visible while actually cutting) are unchanged.
           const CHIP_COUNT = 14;
-          for (let i = 0; i < CHIP_COUNT; i++) {
-            const angle = (i / CHIP_COUNT) * Math.PI * 1.3 - 0.55;
-            const dist = 55 + (i % 4) * 16;
-            const tx = Math.round(Math.cos(angle) * dist);
-            const ty = Math.round(-Math.abs(Math.sin(angle) * dist) - 12 - (i % 3) * 10);
-            const tr = (i % 2 === 0 ? 1 : -1) * (220 + i * 17);
-            const size = 5 + (i % 4) * 2;
-            const chip = document.createElement('div');
-            chip.className = 'twc-chip';
-            chip.style.cssText = 'position:absolute; left:0; top:0; width:' + size + 'px; height:' + Math.round(size * 0.7) + 'px; border-radius:70% 30% 60% 40%; background:linear-gradient(135deg, ' + material.chipHi + ', ' + material.chipMid + ' 60%, ' + material.chipLo + '); box-shadow:0 0 2px rgba(255,255,255,0.3); --tx:' + tx + 'px; --ty:' + ty + 'px; --tr:' + tr + 'deg; animation-delay:' + (i * 0.09).toFixed(2) + 's;';
-            chipWrap.appendChild(chip);
-          }
+          TWC_MATERIALS.forEach(function(material, mi) {
+            const chipSet = document.createElement('div');
+            chipSet.className = 'twc-chip-set twc-mat-chips-' + (mi + 1);
+            chipSet.style.cssText = 'position:absolute; left:0; top:0; width:1px; height:1px;';
+            for (let i = 0; i < CHIP_COUNT; i++) {
+              const angle = (i / CHIP_COUNT) * Math.PI * 1.3 - 0.55;
+              const dist = 55 + (i % 4) * 16;
+              const tx = Math.round(Math.cos(angle) * dist);
+              const ty = Math.round(-Math.abs(Math.sin(angle) * dist) - 12 - (i % 3) * 10);
+              const tr = (i % 2 === 0 ? 1 : -1) * (220 + i * 17);
+              const size = 5 + (i % 4) * 2;
+              const chip = document.createElement('div');
+              chip.className = 'twc-chip';
+              chip.style.cssText = 'position:absolute; left:0; top:0; width:' + size + 'px; height:' + Math.round(size * 0.7) + 'px; border-radius:70% 30% 60% 40%; background:linear-gradient(135deg, ' + material.chipHi + ', ' + material.chipMid + ' 60%, ' + material.chipLo + '); box-shadow:0 0 2px rgba(255,255,255,0.3); --tx:' + tx + 'px; --ty:' + ty + 'px; --tr:' + tr + 'deg; animation-delay:' + (i * 0.09).toFixed(2) + 's;';
+              chipSet.appendChild(chip);
+            }
+            chipWrap.appendChild(chipSet);
+          });
         }
 
         function twcShowProcessingModal(title, paragraphs) {
@@ -1425,7 +1471,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           animOuter.appendChild(animInner);
           body.appendChild(animOuter);
 
-          twcBuildEndmillAnim(animInner, twcPickMaterial());
+          twcBuildEndmillAnim(animInner);
 
           // Switched from transform:scale() to CSS zoom - a genuinely
           // different scaling mechanism (it resizes the actual layout

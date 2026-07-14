@@ -1,3 +1,11 @@
+## v1.25.1 (EXPERIMENTAL — material now actually rotates every loop; bottom sliver fix)
+
+**Fixed the material never changing (always Aluminum).** v1.25.0's approach picked one material per dialog-opening in JS - but the animation loops purely in CSS, so JS never runs again after the first build, meaning the material could never change on subsequent loops within a single opening (and since openings are short, you'd almost always just see Aluminum). Rebuilt so all three materials are baked in as stacked block layers (plus matching chip sets), each cross-fading in for its own third of a 30-second master cycle - so the material now visibly rotates aluminum → wood → plastic → aluminum on every loop, driven entirely by CSS with no JS needed. Verified directly: all three block layers build with the correct material name labels and 5 reveal bands each, plus three matching chip sets. The material name label and per-material chip colors carry through as before.
+
+**Fixed the sliver that was being left at the bottom.** The band-geometry math itself did reach the block's bottom edge exactly (verified), so the leftover was a sub-pixel rendering gap right at the very bottom - the last (bottom) band now extends a few pixels past the block's bottom edge (harmlessly clipped away by the block's own `overflow:hidden`), guaranteeing full coverage with no sliver.
+
+Note: the `zoom`-based border/seam fix from v1.25.0 is unchanged and still in place; if the perimeter border is still showing, that's still the open item to look at together.
+
 ## v1.25.0 (EXPERIMENTAL — material cycling, material name stamped into the block, new border-fix attempt)
 
 **Caught and fixed a real bug introduced while building this**: a backslash-escaped quote inside the material label's `font-family` value got collapsed by the outer template literal (the same class of bug that's bitten this project before), breaking the generated dialog's script entirely. Fixed the safe way - avoided the backslash escaping altogether by using double quotes for the font name instead of trying to get the escaping exactly right.
