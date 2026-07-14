@@ -2089,9 +2089,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           twcSaveStoredValues(values);
         }
 
-        document.getElementById('wcTableBody').addEventListener('click', function(e) {
-          const arrow = e.target.closest('.wear-arrow');
-          if (!arrow) return;
+        function twcStepArrowOnce(arrow) {
           const dir = parseFloat(arrow.getAttribute('data-dir'));
           const input = arrow.closest('.wear-stepper').querySelector('.wear-input');
           const current = parseFloat(input.value);
@@ -2103,7 +2101,48 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           updateApplySafetyBtnState();
           updateOpSectionStats();
           twcCollectAndSaveCurrentValues();
+        }
+
+        // Press and hold a stepper arrow to repeat quickly instead of
+        // needing one click per 0.01 step - a short initial delay (so a
+        // normal quick click still only steps once), then repeats at a
+        // fast fixed interval until released. All the actual stepping
+        // happens here (mousedown/touchstart), not in a 'click' handler,
+        // so a held press doesn't also fire an extra step when the
+        // browser's own click event follows the eventual mouseup.
+        const TWC_STEP_REPEAT_DELAY_MS = 400;
+        const TWC_STEP_REPEAT_INTERVAL_MS = 70;
+        let twcStepTimeout = null;
+        let twcStepInterval = null;
+
+        function twcStopStepping() {
+          if (twcStepTimeout) { clearTimeout(twcStepTimeout); twcStepTimeout = null; }
+          if (twcStepInterval) { clearInterval(twcStepInterval); twcStepInterval = null; }
+        }
+
+        function twcStartStepping(arrow) {
+          twcStopStepping();
+          twcStepArrowOnce(arrow);
+          twcStepTimeout = setTimeout(function() {
+            twcStepInterval = setInterval(function() {
+              twcStepArrowOnce(arrow);
+            }, TWC_STEP_REPEAT_INTERVAL_MS);
+          }, TWC_STEP_REPEAT_DELAY_MS);
+        }
+
+        document.getElementById('wcTableBody').addEventListener('mousedown', function(e) {
+          const arrow = e.target.closest('.wear-arrow');
+          if (!arrow) return;
+          twcStartStepping(arrow);
         });
+        document.getElementById('wcTableBody').addEventListener('touchstart', function(e) {
+          const arrow = e.target.closest('.wear-arrow');
+          if (!arrow) return;
+          twcStartStepping(arrow);
+        }, { passive: true });
+        document.addEventListener('mouseup', twcStopStepping);
+        document.addEventListener('touchend', twcStopStepping);
+        document.addEventListener('touchcancel', twcStopStepping);
 
         document.getElementById('wcTableBody').addEventListener('input', function(e) {
           const input = e.target.closest('.wear-input');
@@ -2195,7 +2234,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         document.getElementById('wcTableBody').addEventListener('keydown', function(e) {
           if (e.key !== 'Enter' && e.key !== ' ') return;
           const arrow = e.target.closest('.wear-arrow');
-          if (arrow) { e.preventDefault(); arrow.click(); }
+          if (arrow) { e.preventDefault(); twcStepArrowOnce(arrow); }
         });
 
         document.getElementById('applySafetyBtn').addEventListener('click', async function() {
