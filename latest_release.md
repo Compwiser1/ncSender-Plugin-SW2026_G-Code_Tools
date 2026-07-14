@@ -1,3 +1,11 @@
+## v1.23.5 (EXPERIMENTAL — fluid width, faster repeat, touchscreen double-tap fix)
+
+**Dialog container is now fluid** (`width: 100%; max-width: 1180px`) instead of a hard-fixed `1180px` - a first, low-risk step toward vertical-mode support. This alone doesn't reflow the internal layout (the magazine graphic and tables are still width-optimized), but the dialog no longer forces itself to be wider than the actual available space. A deeper responsive redesign (stacking the magazine graphic, collapsing tables) is still pending real dimensions/screenshots from vertical mode to design against properly.
+
+**Reduced the stepper repeat interval to 100ms** (down from 140ms) - interpreting "decrease the time the up and down buttons take to increase vs decrease" as the time between repeated steps once holding kicks in. The 1-second initial delay before repeating starts is unchanged. Please flag if this wasn't the right timing to adjust.
+
+**Fixed the touchscreen double-tap/double-click issue** - confirmed root cause: touchscreens fire both a real `touchstart` and a synthetic `mousedown` shortly after for the same physical tap (kept for compatibility with mouse-only code), so every tap was silently double-firing whatever the mousedown handler did. Fixed with a 400ms guard: touching an arrow or a wear-input field now records the moment, and any mousedown arriving within that window is treated as the expected synthetic echo and ignored. Verified directly: a real touch followed by a synthetic mousedown 50ms later now produces exactly one step, while normal mouse-only clicks (no touch involved) are completely unaffected.
+
 ## v1.23.4 (EXPERIMENTAL — longer pause before stepper auto-repeat kicks in)
 
 **Increased the delay before holding a stepper arrow starts auto-repeating, from 0.4s to a full 1 second** - a quick tap still steps once immediately as before, but repeating no longer kicks in almost right away. Verified directly: at 500ms into a hold, the value is still just the single initial step; repeating only begins once the full 1-second mark passes.

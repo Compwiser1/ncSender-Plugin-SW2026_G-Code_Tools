@@ -454,7 +454,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: var(--color-text-primary, #e0e0e0);
         padding: 14px 18px;
-        width: 1180px;
+        width: 100%;
         max-width: 1180px;
         margin: 0 auto;
         box-sizing: border-box;
@@ -2107,6 +2107,19 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           twcCollectAndSaveCurrentValues();
         }
 
+        // Touchscreens fire both a real touchstart AND a synthetic
+        // mousedown shortly after for the same physical tap (kept for
+        // backward compatibility with mouse-only code) - without a
+        // guard, that means every tap on a touchscreen double-fires
+        // whatever a mousedown handler does. Recording when a touch just
+        // happened and having every mousedown handler skip itself if one
+        // did fires the real touch handling once and ignores the
+        // trailing synthetic echo.
+        const TWC_TOUCH_MOUSE_IGNORE_MS = 400;
+        let twcLastTouchTs = 0;
+        function twcMarkTouch() { twcLastTouchTs = Date.now(); }
+        function twcIsSyntheticMouseAfterTouch() { return (Date.now() - twcLastTouchTs) < TWC_TOUCH_MOUSE_IGNORE_MS; }
+
         // Press and hold a stepper arrow to repeat quickly instead of
         // needing one click per 0.01 step - a short initial delay (so a
         // normal quick click still only steps once), then repeats at a
@@ -2115,7 +2128,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         // so a held press doesn't also fire an extra step when the
         // browser's own click event follows the eventual mouseup.
         const TWC_STEP_REPEAT_DELAY_MS = 1000;
-        const TWC_STEP_REPEAT_INTERVAL_MS = 140;
+        const TWC_STEP_REPEAT_INTERVAL_MS = 100;
         let twcStepTimeout = null;
         let twcStepInterval = null;
 
@@ -2135,6 +2148,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         }
 
         document.getElementById('wcTableBody').addEventListener('mousedown', function(e) {
+          if (twcIsSyntheticMouseAfterTouch()) return;
           const arrow = e.target.closest('.wear-arrow');
           if (!arrow) return;
           twcStartStepping(arrow);
@@ -2142,6 +2156,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         document.getElementById('wcTableBody').addEventListener('touchstart', function(e) {
           const arrow = e.target.closest('.wear-arrow');
           if (!arrow) return;
+          twcMarkTouch();
           twcStartStepping(arrow);
         }, { passive: true });
         document.addEventListener('mouseup', twcStopStepping);
@@ -2189,6 +2204,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         }
 
         document.getElementById('wcTableBody').addEventListener('mousedown', function(e) {
+          if (twcIsSyntheticMouseAfterTouch()) return;
           const input = e.target.closest('.wear-input');
           if (!input) return;
           twcCancelLongPress();
@@ -2211,6 +2227,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         document.getElementById('wcTableBody').addEventListener('touchstart', function(e) {
           const input = e.target.closest('.wear-input');
           if (!input) return;
+          twcMarkTouch();
           twcCancelLongPress();
           twcLongPressTarget = input;
           input.classList.add('twc-longpressing');
