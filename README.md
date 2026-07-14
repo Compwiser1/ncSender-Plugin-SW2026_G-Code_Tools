@@ -1,8 +1,8 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.24.0 (EXPERIMENTAL layout — see note below)
+**Version**: 1.24.1 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
-**Requirements**: ncSender 2.0.62+
+**Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
 
 An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post processor**. This plugin **replaces Dynamic Tool Slot Mapper** — only one of the two should be enabled at a time.
 
@@ -111,8 +111,9 @@ Reads only the footer tool summary table, not the inline `T## M06` calls — the
 Runs in the browser (not the Jint plugin sandbox) to avoid its 50 MB memory cap on large files. Prepends a marker comment so the reload triggered by uploading the translated file doesn't re-fire this plugin in a loop. Retries the upload with backoff to handle a Windows file-lock race between the original file write and this plugin's write.
 
 ### Compatibility
-- **ncSender**: 2.0.62 or higher
-- Runs in the `v2` runtime (Jint sandbox). Requires `onGcodeProgramLoad`, `pluginContext.showDialog()`, and `pluginContext.getTools()`.
+- **ncSender (OSS)**: 2.0.37 or higher
+- **ncSender Pro**: 2.0.88 or higher
+- Runs in the `pro-v2` runtime (Jint sandbox). Requires `onGcodeProgramLoad`, `pluginContext.showDialog()`, and `pluginContext.getTools()`.
 
 ---
 

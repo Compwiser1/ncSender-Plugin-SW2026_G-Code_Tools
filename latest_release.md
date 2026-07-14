@@ -1,3 +1,7 @@
+## v1.24.1 (EXPERIMENTAL — reverted the v1.24.0 version-requirement change, it broke the plugin)
+
+**Reverted the ncSender 2.0.62+/Pro-removal changes from v1.24.0** - confirmed to break the plugin, reason not yet diagnosed from here. `manifest.json`'s `minAppVersion` and `platforms` key (`pro-v2`), the README's Compatibility section, and both in-code error messages are all back to their original ncSender 2.0.37+ (OSS) / 2.0.88+ (Pro) wording exactly as they were before v1.24.0. The other two v1.24.0 changes (larger "Processing..." caption, 5-pass zigzag animation) are untouched and remain in place, since only the version-requirement change was reported as broken.
+
 ## v1.24.0 (EXPERIMENTAL — larger caption, ncSender 2.0.62+ only, 5-pass zigzag roughing)
 
 **"Processing..." caption enlarged** from 20px to 30px.

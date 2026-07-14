@@ -140,7 +140,7 @@ function loadToolLibrary() {
     throw new Error('pluginContext is not defined — host did not inject the plugin context');
   }
   if (typeof pluginContext.getTools !== 'function') {
-    throw new Error('pluginContext.getTools is not available — host needs ncSender 2.0.62+');
+    throw new Error('pluginContext.getTools is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
   }
 
   const tools = pluginContext.getTools();
@@ -3548,7 +3548,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
   `;
 
   if (typeof pluginContext.showDialog !== 'function') {
-    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.62+');
+    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
   }
 
   const response = pluginContext.showDialog('SolidWorks G-Code Manager', html, { closable: false });
