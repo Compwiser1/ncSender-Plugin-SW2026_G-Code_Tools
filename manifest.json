@@ -1,7 +1,7 @@
 {
   "id": "com.ncsender.sw2026-gcode-tools",
   "name": "SW2026 G-Code Tools",
-  "version": "1.23.5",
+  "version": "1.23.6",
   "minAppVersion": "2.0.37",
   "author": "ncSender",
   "description": "Tools for G-code produced by the SolidWorks 2026 FrankenOKO post processor. v1 syncs the ncSender Tool Library from the tool summary table embedded in each loaded G-code file. Replaces Dynamic Tool Slot Mapper.",

@@ -1,3 +1,7 @@
+## v1.23.6 (EXPERIMENTAL — sweeping light glint reinforces the rotation illusion)
+
+**Added a light glint that sweeps across the whole tool on a fast repeating loop**, on top of the existing flute-stripe slide - a reflection-like highlight passing over the housing, collet, shank, and flutes together, reinforcing the "it's spinning" read more immediately than the flute barber-pole effect alone. Pure CSS (`transform`/`opacity` only), consistent with the rest of this animation's compositor-safe design. The endmill container now clips to its own bounding box so the glint doesn't spill past the tool's silhouette.
+
 ## v1.23.5 (EXPERIMENTAL — fluid width, faster repeat, touchscreen double-tap fix)
 
 **Dialog container is now fluid** (`width: 100%; max-width: 1180px`) instead of a hard-fixed `1180px` - a first, low-risk step toward vertical-mode support. This alone doesn't reflow the internal layout (the magazine graphic and tables are still width-optimized), but the dialog no longer forces itself to be wider than the actual available space. A deeper responsive redesign (stacking the magazine graphic, collapsing tables) is still pending real dimensions/screenshots from vertical mode to design against properly.
