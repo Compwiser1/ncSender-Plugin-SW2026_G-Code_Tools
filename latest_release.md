@@ -1,3 +1,7 @@
+## v1.24.3 (EXPERIMENTAL — stripped block down further, still chasing the border report)
+
+**Removed the block's hatching texture overlay** (a subtle repeating vertical-stripe pattern) on top of last version's removed highlight strip - the block is now a completely plain gradient fill with no decorative overlays at all. Honest note: I couldn't directly render the screenshot the user provided to compare against, so this is an incremental, defensive simplification rather than a confirmed fix for the specific line shown - if it's still there after this, the next step is narrowing down exactly which element it is (a zoomed crop of just that line, or its approximate color, would help pin it down precisely instead of continuing to guess).
+
 ## v1.24.2 (EXPERIMENTAL — removed a border-like highlight strip and the sweeping rotation glint)
 
 **Removed the block's top highlight strip** (a thin gradient bar that was reading as a border around the aluminum block) - the block itself never had an actual CSS `border` property, so this was the most likely candidate for what looked like one.
