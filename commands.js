@@ -140,7 +140,7 @@ function loadToolLibrary() {
     throw new Error('pluginContext is not defined — host did not inject the plugin context');
   }
   if (typeof pluginContext.getTools !== 'function') {
-    throw new Error('pluginContext.getTools is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
+    throw new Error('pluginContext.getTools is not available — host needs ncSender 2.0.62+');
   }
 
   const tools = pluginContext.getTools();
@@ -793,9 +793,9 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
       .twc-fix-btn { padding: 6px 16px; font-size: 0.78rem; }
 
       .twc-endmill-caption {
-        position: absolute; left: 24px; top: 18px;
+        position: absolute; left: 24px; top: 14px;
         font-family: 'JetBrains Mono', ui-monospace, monospace;
-        font-size: 20px; font-weight: 600; letter-spacing: 0.16em;
+        font-size: 30px; font-weight: 600; letter-spacing: 0.16em;
         text-transform: uppercase; color: #98a1ad;
         animation: twc-caption-flash 1.2s ease-in-out infinite;
       }
@@ -803,23 +803,21 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
 
       .twc-endmill-travel {
         position: absolute; left: 0; top: 0; width: 1px; height: 1px;
-        animation: twc-endmill-travel 9s linear infinite;
+        animation: twc-endmill-travel 10s linear infinite;
       }
       @keyframes twc-endmill-travel {
-        0%   { transform: translate(-60px, -106px); }
-        3%   { transform: translate(110px, -33.33px); }
-        28%  { transform: translate(1810px, -33.33px); }
-        31%  { transform: translate(1900px, -106px); }
-        33%  { transform: translate(-60px, -106px); }
-        36%  { transform: translate(110px, -6.67px); }
-        61%  { transform: translate(1810px, -6.67px); }
-        64%  { transform: translate(1900px, -106px); }
-        66%  { transform: translate(-60px, -106px); }
-        69%  { transform: translate(110px, 20px); }
-        94%  { transform: translate(1810px, 20px); }
-        97%  { transform: translate(1900px, -106px); }
-        99%  { transform: translate(-60px, -106px); }
-        100% { transform: translate(-60px, -106px); }
+        0%      { transform: translate(70px, -60px); }
+        1.6%    { transform: translate(70px, -44px); }
+        19.2%   { transform: translate(1850px, -44px); }
+        20.8%   { transform: translate(1850px, -28px); }
+        38.4%   { transform: translate(70px, -28px); }
+        40%     { transform: translate(70px, -12px); }
+        57.6%   { transform: translate(1850px, -12px); }
+        59.2%   { transform: translate(1850px, 4px); }
+        76.8%   { transform: translate(70px, 4px); }
+        78.4%   { transform: translate(70px, 20px); }
+        96%     { transform: translate(1850px, 20px); }
+        96.01%, 100% { transform: translate(70px, -60px); }
       }
 
       .twc-endmill-flutes { animation: twc-flute-spin 0.15s linear infinite; }
@@ -836,44 +834,75 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
         65%, 100%   { transform: translateX(124px); opacity: 0; }
       }
 
-      .twc-chip-wrap { animation: twc-chip-visibility 9s linear infinite; }
+      .twc-chip-wrap { animation: twc-chip-visibility 10s linear infinite; }
       @keyframes twc-chip-visibility {
-        0%, 2%    { opacity: 0; }
-        4%, 27%   { opacity: 1; }
-        29%, 35%  { opacity: 0; }
-        37%, 60%  { opacity: 1; }
-        62%, 68%  { opacity: 0; }
-        70%, 93%  { opacity: 1; }
-        95%, 100% { opacity: 0; }
+        0%, 1.6%      { opacity: 0; }
+        2.2%, 18.6%   { opacity: 1; }
+        19.2%, 20.8%  { opacity: 0; }
+        21.4%, 37.8%  { opacity: 1; }
+        38.4%, 40%    { opacity: 0; }
+        40.6%, 57%    { opacity: 1; }
+        57.6%, 59.2%  { opacity: 0; }
+        59.8%, 76.2%  { opacity: 1; }
+        76.8%, 78.4%  { opacity: 0; }
+        79%, 95.4%    { opacity: 1; }
+        96%, 100%     { opacity: 0; }
       }
 
-      /* Each band's scaleX travels the exact same 110px-to-1810px range
-         the tool crosses during its own pass (3%-28%, 36%-61%, 69%-94%),
-         over the exact same percentage window, so the revealed edge
-         tracks the tool's position throughout the whole pass rather than
-         just matching up at the start and end. All three snap back to
-         hidden together right at the loop point, giving the block a
-         fresh look on the next cycle. */
-      .twc-remove-band-1 { animation: twc-remove-band-1 9s linear infinite; }
+      /* Each band spans the tool's FULL 1780px travel range (clipped by
+         the block's own overflow:hidden to its real 1700px width), so a
+         plain 0-to-100%-of-pass linear scaleX is mathematically the same
+         function of time as the tool's own position - no separate
+         crossing-point percentage calculation to accidentally get
+         wrong. Direction alternates via transform-origin only (left for
+         rightward passes, right for leftward). All five snap back to
+         hidden together right at the loop point. */
+      .twc-remove-band-1, .twc-remove-band-3, .twc-remove-band-5 { transform-origin: left; }
+      .twc-remove-band-2, .twc-remove-band-4 { transform-origin: right; }
+      .twc-remove-band-1 { animation: twc-remove-band-1 10s linear infinite; }
       @keyframes twc-remove-band-1 {
-        0%, 3%     { transform: scaleX(0); }
-        28%        { transform: scaleX(1); }
-        99%        { transform: scaleX(1); }
-        99.5%, 100% { transform: scaleX(0); }
+        0%, 1.6%     { transform: scaleX(0); }
+        19.2%        { transform: scaleX(1); }
+        96%          { transform: scaleX(1); }
+        96.01%, 100% { transform: scaleX(0); }
       }
-      .twc-remove-band-2 { animation: twc-remove-band-2 9s linear infinite; }
+      .twc-remove-band-2 { animation: twc-remove-band-2 10s linear infinite; }
       @keyframes twc-remove-band-2 {
-        0%, 36%    { transform: scaleX(0); }
-        61%        { transform: scaleX(1); }
-        99%        { transform: scaleX(1); }
-        99.5%, 100% { transform: scaleX(0); }
+        0%, 20.8%    { transform: scaleX(0); }
+        38.4%        { transform: scaleX(1); }
+        96%          { transform: scaleX(1); }
+        96.01%, 100% { transform: scaleX(0); }
       }
-      .twc-remove-band-3 { animation: twc-remove-band-3 9s linear infinite; }
+      .twc-remove-band-3 { animation: twc-remove-band-3 10s linear infinite; }
       @keyframes twc-remove-band-3 {
-        0%, 69%    { transform: scaleX(0); }
-        94%        { transform: scaleX(1); }
-        99%        { transform: scaleX(1); }
-        99.5%, 100% { transform: scaleX(0); }
+        0%, 40%      { transform: scaleX(0); }
+        57.6%        { transform: scaleX(1); }
+        96%          { transform: scaleX(1); }
+        96.01%, 100% { transform: scaleX(0); }
+      }
+      .twc-remove-band-4 { animation: twc-remove-band-4 10s linear infinite; }
+      @keyframes twc-remove-band-4 {
+        0%, 59.2%    { transform: scaleX(0); }
+        76.8%        { transform: scaleX(1); }
+        96%          { transform: scaleX(1); }
+        96.01%, 100% { transform: scaleX(0); }
+      }
+      .twc-remove-band-5 { animation: twc-remove-band-5 10s linear infinite; }
+      @keyframes twc-remove-band-5 {
+        0%, 78.4%    { transform: scaleX(0); }
+        96%          { transform: scaleX(1); }
+        96.01%, 100% { transform: scaleX(0); }
+      }
+
+      /* The now-fully-removed block snaps out of view right as the
+         bands reset, then rises back up from below the visible canvas
+         with fresh material already showing (bands already hidden by
+         the time it's back in view). */
+      .twc-endmill-block { animation: twc-block-rise 10s linear infinite; }
+      @keyframes twc-block-rise {
+        0%, 96%      { transform: translateY(0); }
+        96.01%       { transform: translateY(150px); }
+        100%         { transform: translateY(0); }
       }
 
       .twc-chip {
@@ -1247,23 +1276,33 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
           root.style.cssText = 'position:relative; width:1920px; height:220px; overflow:hidden; background:transparent;';
 
           const stock = document.createElement('div');
-          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%);';
+          stock.className = 'twc-endmill-block';
+          stock.style.cssText = 'position:absolute; left:110px; top:126px; width:1700px; height:80px; overflow:hidden; border-radius:0 0 3px 3px; background:linear-gradient(180deg, #aeb4bd 0%, #999fa9 22%, #a9afb9 34%, #8c929c 75%, #767b84 100%);';
           const stockScale = document.createElement('div');
           stockScale.style.cssText = 'position:absolute; left:0; top:0; right:0; height:5px; background:linear-gradient(180deg, rgba(70,76,86,0.55), rgba(70,76,86,0.12));';
           stock.appendChild(stockScale);
           const stockHatch = document.createElement('div');
           stockHatch.style.cssText = 'position:absolute; inset:0; opacity:0.5; background:repeating-linear-gradient(90deg, rgba(0,0,0,0.10) 0 7px, transparent 7px 12px);';
           stock.appendChild(stockHatch);
-          // These bands sit on TOP of the stock's own gradient, so a
-          // literal transparent background would show nothing removed at
-          // all - they need to be painted with the modal's own actual
-          // background color instead, so a fully-revealed band reads as
-          // a genuine gap through to what's behind the animation.
-          const BAND_H = 80 / 3;
-          for (let i = 0; i < 3; i++) {
+          // Five progressively-deeper passes, zigzagging left-right-left
+          // etc. Each band spans the tool's FULL 1780px travel range
+          // (110-40 to 1810+40, not just the block's own 1700px), clipped
+          // by the block's own overflow:hidden - this makes the reveal
+          // track the tool's actual position by construction (same
+          // linear function of time), rather than needing a separate,
+          // easy-to-get-subtly-wrong percentage calculation for exactly
+          // when the tool crosses the block's true edges. A small 1.5px
+          // vertical overlap between adjacent bands closes off any
+          // possible seam between rows.
+          const OVERTRAVEL = 40;
+          const BAND_H5 = 80 / 5;
+          const BAND_OVERLAP = 1.5;
+          for (let i = 0; i < 5; i++) {
+            const top = i * BAND_H5 - (i === 0 ? 0 : BAND_OVERLAP);
+            const bottom = (i + 1) * BAND_H5 + (i === 4 ? 0 : BAND_OVERLAP);
             const band = document.createElement('div');
             band.className = 'twc-remove-band twc-remove-band-' + (i + 1);
-            band.style.cssText = 'position:absolute; left:0; top:' + (i * BAND_H) + 'px; width:100%; height:' + BAND_H + 'px; background:var(--color-surface-muted, #1a1a1a); transform-origin:left; transform:scaleX(0);';
+            band.style.cssText = 'position:absolute; left:-' + OVERTRAVEL + 'px; top:' + top + 'px; width:' + (1700 + 2 * OVERTRAVEL) + 'px; height:' + (bottom - top) + 'px; background:var(--color-surface-muted, #1a1a1a); transform:scaleX(0);';
             stock.appendChild(band);
           }
           root.appendChild(stock);
@@ -3509,7 +3548,7 @@ function showUnifiedDialog(content, filename, sourcePath, rows, status, toolLibr
   `;
 
   if (typeof pluginContext.showDialog !== 'function') {
-    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.37+ (OSS) or 2.0.88+ (Pro)');
+    throw new Error('pluginContext.showDialog is not available — host needs ncSender 2.0.62+');
   }
 
   const response = pluginContext.showDialog('SolidWorks G-Code Manager', html, { closable: false });

@@ -1,3 +1,17 @@
+## v1.24.0 (EXPERIMENTAL — larger caption, ncSender 2.0.62+ only, 5-pass zigzag roughing)
+
+**"Processing..." caption enlarged** from 20px to 30px.
+
+**Consolidated version requirements to ncSender 2.0.62+, removed all mention of ncSender Pro.** `manifest.json`'s `minAppVersion` and `platforms` key updated accordingly (`pro-v2` renamed to `v2`), README's Compatibility section collapsed to a single line, and both in-code error messages (`getTools`/`showDialog` unavailable) updated to match. Please double-check the `platforms` key name (`v2`) is what your actual ncSender build expects, since this couldn't be verified from here.
+
+**Replaced the retract-and-return 3-pass animation with a 5-pass zigzag roughing pattern**, matching a real step-over roughing strategy: starts just left of the block at the very top surface, plunges down 1/5 of the block's height, cuts right past the far edge, steps down another 1/5, cuts back left past the near edge, and so on for 5 total passes until the block is completely gone, then resets. No retracting up between passes - the tool stays engaged and only lifts briefly for the reset.
+
+Iterated through several rounds against a live preview before landing here, catching two real bugs along the way:
+- **A subtle reveal/tool desync**: the "removed" reveal was scaled to the block's true width while the tool traveled a slightly larger distance (it overtravels past each edge before stepping down), so mapping both to the same time window made the reveal drift out of sync mid-pass and finish a hair before the tool actually reached the edge - visible as a thin sliver left behind. Fixed by making each band's own coordinate space span the tool's *entire* travel range (including the overtravel), clipped by the block's own edge, so the reveal and the tool position are the same linear function of time by construction rather than by careful percentage-matching.
+- Added a small 1.5px overlap between adjacent bands as a defensive measure against any possible seam between rows.
+
+Each pass's depth is derived from the endmill's actual tip geometry (verified directly: tip position at the end of each pass lands exactly on that band's bottom edge, and the very first position exactly matches the block's top surface). The reset now has the freshly-restored block rise up from below the visible area, rather than just reappearing in place.
+
 ## v1.23.6 (EXPERIMENTAL — sweeping light glint reinforces the rotation illusion)
 
 **Added a light glint that sweeps across the whole tool on a fast repeating loop**, on top of the existing flute-stripe slide - a reflection-like highlight passing over the housing, collet, shank, and flutes together, reinforcing the "it's spinning" read more immediately than the flute barber-pole effect alone. Pure CSS (`transform`/`opacity` only), consistent with the rest of this animation's compositor-safe design. The endmill container now clips to its own bounding box so the glint doesn't spill past the tool's silhouette.

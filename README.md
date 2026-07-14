@@ -1,8 +1,8 @@
 # SW2026 G-Code Tools
 
-**Version**: 1.23.6 (EXPERIMENTAL layout — see note below)
+**Version**: 1.24.0 (EXPERIMENTAL layout — see note below)
 **Category**: Utility
-**Requirements**: ncSender 2.0.37+ (OSS) or ncSender Pro 2.0.88+
+**Requirements**: ncSender 2.0.62+
 
 An ncSender plugin for G-code produced by the **SolidWorks 2026 FrankenOKO post processor**. This plugin **replaces Dynamic Tool Slot Mapper** — only one of the two should be enabled at a time.
 
@@ -49,7 +49,7 @@ Once a tool is in the library, click its **Slot** badge to open a picker and ass
 ### 2. Operation Manager — Tool Wear Compensation
 Lists every **operation** in the file (not every tool), each with independent **Z Offset** and **X & Y Offset** values (-1.00 to 1.00). **Apply Offset** locks in whatever values you've entered; **Live On The Edge** skips wear comp entirely. G91 (incremental) mode lines are never touched, regardless. **Z Offset only shifts real feed moves (G01/G02/G03)** - a G00 rapid retract or reposition (like a clearance height between passes) isn't cutting anything, so it's never shifted. **Press and hold (~0.6s) any Z Offset or X & Y Offset field** to reset just that one value to 0.00 without selecting and retyping. **Press and hold either stepper arrow** to repeat quickly instead of clicking once per 0.01 step - a quick click still only steps once.
 
-Checking your offset(s) can take a real, noticeable amount of time on a large file with many operations and depth passes, since every line gets analyzed individually. Both **Apply Offset** and **Bring This G-Code To Life!** show a loading popup with an animated endmill face-milling a bar of aluminum in 3 progressively deeper passes - the material is actually removed behind the tool as it crosses, each pass exactly matching the endmill's own cutting depth for that pass, until the block is fully gone and the cycle resets - plus a flashing "Processing..." caption and a short overview of what's actually happening while you wait, instead of leaving the dialog looking stuck. The animation is pure CSS rather than JavaScript-driven, specifically so it keeps running smoothly for the whole wait - a JS-driven version would freeze solid, since the offset check itself is a heavy synchronous computation that blocks everything else JS could be doing at the same time.
+Checking your offset(s) can take a real, noticeable amount of time on a large file with many operations and depth passes, since every line gets analyzed individually. Both **Apply Offset** and **Bring This G-Code To Life!** show a loading popup with an animated endmill face-milling a bar of aluminum in a 5-pass zigzag roughing pattern - starting just left of the block at the top surface, plunging down a fifth of the material's height, cutting past the far edge, stepping down again, cutting back the other way, and so on until the block is fully gone and the cycle resets - plus a large flashing "Processing..." caption and a short overview of what's actually happening while you wait, instead of leaving the dialog looking stuck. The animation is pure CSS rather than JavaScript-driven, specifically so it keeps running smoothly for the whole wait - a JS-driven version would freeze solid, since the offset check itself is a heavy synchronous computation that blocks everything else JS could be doing at the same time.
 
 **X & Y Offset actually reshapes real bores, bosses, and outer profiles.** Direction comes from the operation's `( Notes: ... )` comment - "internal" (a bore) or "external" (a boss/outer boundary); any numeric suffix like `TWC_Internal_3` is ignored. A **negative** value always means "remove more material" and a **positive** value always means "keep more material," regardless of internal/external:
 - **Internal (bore):** negative → hole gets bigger; positive → hole gets smaller/tighter.
@@ -111,9 +111,8 @@ Reads only the footer tool summary table, not the inline `T## M06` calls — the
 Runs in the browser (not the Jint plugin sandbox) to avoid its 50 MB memory cap on large files. Prepends a marker comment so the reload triggered by uploading the translated file doesn't re-fire this plugin in a loop. Retries the upload with backoff to handle a Windows file-lock race between the original file write and this plugin's write.
 
 ### Compatibility
-- **ncSender (OSS)**: 2.0.37 or higher
-- **ncSender Pro**: 2.0.88 or higher
-- Runs in the `pro-v2` runtime (Jint sandbox). Requires `onGcodeProgramLoad`, `pluginContext.showDialog()`, and `pluginContext.getTools()`.
+- **ncSender**: 2.0.62 or higher
+- Runs in the `v2` runtime (Jint sandbox). Requires `onGcodeProgramLoad`, `pluginContext.showDialog()`, and `pluginContext.getTools()`.
 
 ---
 
